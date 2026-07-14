@@ -5,8 +5,52 @@ import { StatCard } from "../components/StatCard";
 import { Skeleton, Tag } from "../components/UI";
 import { toast } from "../components/Toast";
 import { formatCost, formatDate, formatTokens } from "../utils";
+import type { SessionSummary, TokenTotals } from "../types";
 
 type Range = "7" | "30" | "all";
+type ExportKind = "days" | "sessions" | "models" | "tools" | "skills";
+
+function csvEscape(v: unknown): string {
+  if (v == null) return "";
+  const s = String(v);
+  if (/[",\n\r]/.test(s)) return `"${s.replace(/"/g, '""')}"`;
+  return s;
+}
+
+function downloadCsv(filename: string, rows: unknown[][]) {
+  const csv = "\uFEFF" + rows.map((r) => r.map(csvEscape).join(",")).join("\n");
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function totalsCols(t: TokenTotals) {
+  return [
+    t.input,
+    t.output,
+    t.cacheRead,
+    t.cacheWrite,
+    t.totalTokens,
+    t.cost,
+    t.messages,
+    t.errors,
+  ];
+}
+
+const TOTAL_HEADERS = [
+  "input",
+  "output",
+  "cache_read",
+  "cache_write",
+  "total_tokens",
+  "cost",
+  "messages",
+  "errors",
+];
 
 export function Usage() {
   const cache = useCache();
@@ -14,17 +58,45 @@ export function Usage() {
   const [q, setQ] = useState("");
   const [range, setRange] = useState<Range>("30");
   const [sort, setSort] = useState<"tokens" | "cost" | "msgs">("tokens");
+  const [exportKind, setExportKind] = useState<ExportKind>("sessions");
 
   useEffect(() => {
     ensureUsage();
   }, []);
+
+  const sessions = useMemo(() => {
+    if (!data) return [] as SessionSummary[];
+    const ql = q.trim().toLowerCase();
+    let list = data.sessions;
+    if (ql)
+      list = list.filter(
+        (s) =>
+          (s.cwd ?? "").toLowerCase().includes(ql) ||
+          (s.provider ?? "").toLowerCase().includes(ql) ||
+          (s.model ?? "").toLowerCase().includes(ql) ||
+          s.id.toLowerCase().includes(ql),
+      );
+    return list;
+  }, [data, q]);
+
+  const sortedProviders = useMemo(() => {
+    if (!data) return [];
+    const list = [...data.byProviderModel];
+    if (sort === "cost") list.sort((a, b) => b.totals.cost - a.totals.cost);
+    else if (sort === "msgs")
+      list.sort((a, b) => b.totals.messages - a.totals.messages);
+    else list.sort((a, b) => b.totals.totalTokens - a.totals.totalTokens);
+    return list;
+  }, [data, sort]);
 
   if (!data) {
     return (
       <div className="page">
         <header className="page-header">
           <div>
-            <h1>用量 <span className="en">Usage</span></h1>
+            <h1>
+              用量 <span className="en">Usage</span>
+            </h1>
             <p className="muted page-kicker">扫描中…</p>
           </div>
         </header>
@@ -59,49 +131,81 @@ export function Usage() {
       ? (data.totals.cacheRead / data.totals.totalTokens) * 100
       : 0;
 
-  const sessions = useMemo(() => {
-    const ql = q.trim().toLowerCase();
-    let list = data.sessions;
-    if (ql)
-      list = list.filter(
-        (s) =>
-          (s.cwd ?? "").toLowerCase().includes(ql) ||
-          (s.provider ?? "").toLowerCase().includes(ql) ||
-          (s.model ?? "").toLowerCase().includes(ql) ||
-          s.id.toLowerCase().includes(ql),
-      );
-    return list;
-  }, [data.sessions, q]);
+  const stamp = new Date().toISOString().slice(0, 10);
 
-  const sortedProviders = useMemo(() => {
-    const list = [...data.byProviderModel];
-    if (sort === "cost") list.sort((a, b) => b.totals.cost - a.totals.cost);
-    else if (sort === "msgs")
-      list.sort((a, b) => b.totals.messages - a.totals.messages);
-    else list.sort((a, b) => b.totals.totalTokens - a.totals.totalTokens);
-    return list;
-  }, [data.byProviderModel, sort]);
+  const exportCsv = (kind: ExportKind = exportKind) => {
+    let rows: unknown[][] = [];
+    let name = `pi-usage-${kind}-${stamp}.csv`;
 
-  const exportCsv = () => {
-    const rows = [
-      ["date", "tokens", "cost", "messages", "errors"],
-      ...days.map((d) => [
-        d.date,
-        d.totals.totalTokens,
-        d.totals.cost,
-        d.totals.messages,
-        d.totals.errors,
-      ]),
-    ];
-    const csv = rows.map((r) => r.join(",")).join("\n");
-    const blob = new Blob([csv], { type: "text/csv" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `pi-usage-${new Date().toISOString().slice(0, 10)}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
-    toast("已导出 CSV", "ok");
+    if (kind === "days") {
+      rows = [
+        ["date", ...TOTAL_HEADERS],
+        ...days.map((d) => [d.date, ...totalsCols(d.totals)]),
+      ];
+      name = `pi-usage-days-${range}-${stamp}.csv`;
+    } else if (kind === "sessions") {
+      rows = [
+        [
+          "id",
+          "started_at",
+          "cwd",
+          "provider",
+          "model",
+          "message_count",
+          "tool_calls",
+          "path",
+          ...TOTAL_HEADERS,
+        ],
+        ...sessions.map((s: SessionSummary) => [
+          s.id,
+          s.startedAt ?? "",
+          s.cwd ?? "",
+          s.provider ?? "",
+          s.model ?? "",
+          s.messageCount,
+          s.toolCalls,
+          s.path,
+          ...totalsCols(s.totals),
+        ]),
+      ];
+      name = `pi-usage-sessions-${stamp}.csv`;
+    } else if (kind === "models") {
+      rows = [
+        ["provider", "model", ...TOTAL_HEADERS],
+        ...sortedProviders.map((p) => [
+          p.provider,
+          p.model,
+          ...totalsCols(p.totals),
+        ]),
+      ];
+      name = `pi-usage-models-${stamp}.csv`;
+    } else if (kind === "tools") {
+      rows = [
+        ["tool", "calls", "errors", "error_rate_pct"],
+        ...data.tools.map((t) => [
+          t.name,
+          t.count,
+          t.errors,
+          t.count > 0 ? ((t.errors / t.count) * 100).toFixed(2) : "0",
+        ]),
+      ];
+      name = `pi-usage-tools-${stamp}.csv`;
+    } else {
+      rows = [
+        ["skill", "count", "last_used"],
+        ...data.skills.map((s) => [s.name, s.count, s.lastUsed ?? ""]),
+      ];
+      name = `pi-usage-skills-${stamp}.csv`;
+    }
+
+    downloadCsv(name, rows);
+    toast(`已导出 ${name}`, "ok");
+  };
+
+  const exportAll = () => {
+    (["days", "sessions", "models", "tools", "skills"] as ExportKind[]).forEach(
+      (k) => exportCsv(k),
+    );
   };
 
   return (
@@ -116,8 +220,23 @@ export function Usage() {
           </p>
         </div>
         <div className="header-actions">
-          <button type="button" className="btn sm" onClick={exportCsv}>
+          <select
+            className="input sm"
+            value={exportKind}
+            onChange={(e) => setExportKind(e.target.value as ExportKind)}
+            title="导出类型"
+          >
+            <option value="sessions">导出会话</option>
+            <option value="days">导出按日</option>
+            <option value="models">导出模型</option>
+            <option value="tools">导出工具</option>
+            <option value="skills">导出技能</option>
+          </select>
+          <button type="button" className="btn sm" onClick={() => exportCsv()}>
             导出 CSV
+          </button>
+          <button type="button" className="btn sm ghost" onClick={exportAll}>
+            全部导出
           </button>
           <button
             type="button"
@@ -162,43 +281,59 @@ export function Usage() {
         <StatCard
           label="消息"
           value={String(rangedTotals.msgs)}
-          hint={`${rangedTotals.errors} errors`}
+          hint={`${data.totals.messages} 累计`}
         />
         <StatCard
-          label="缓存命中"
-          value={cacheRate > 0 ? `${cacheRate.toFixed(1)}%` : "—"}
-          hint={`${formatTokens(data.totals.cacheRead)} read · ${formatTokens(data.totals.cacheWrite)} write`}
+          label="Cache 命中"
+          value={`${cacheRate.toFixed(1)}%`}
+          hint={`${formatTokens(data.totals.cacheRead)} cache read`}
         />
       </div>
 
       <div className="grid-2">
         <section className="panel">
           <div className="panel-header">
-            <h2>By day</h2>
-            <Tag tone="info">{days.length} 天</Tag>
+            <h2>按日</h2>
+            <button
+              type="button"
+              className="btn xs ghost"
+              onClick={() => exportCsv("days")}
+            >
+              CSV
+            </button>
           </div>
           <BarChart
             items={days.map((d) => ({
               label: d.date.slice(5),
               value: d.totals.totalTokens,
-              secondary: formatTokens(d.totals.totalTokens),
+              secondary: `${formatTokens(d.totals.totalTokens)} · ${formatCost(d.totals.cost)}`,
             }))}
-            maxBars={21}
-            emptyText="No usage days found"
+            maxBars={Math.min(days.length, 30)}
+            emptyText="No daily usage"
           />
         </section>
+
         <section className="panel">
           <div className="panel-header">
-            <h2>By provider / model</h2>
-            <select
-              className="input sm"
-              value={sort}
-              onChange={(e) => setSort(e.target.value as any)}
-            >
-              <option value="tokens">按 tokens</option>
-              <option value="cost">按 cost</option>
-              <option value="msgs">按 messages</option>
-            </select>
+            <h2>按模型</h2>
+            <div className="row-gap">
+              <select
+                className="input sm"
+                value={sort}
+                onChange={(e) => setSort(e.target.value as any)}
+              >
+                <option value="tokens">按 tokens</option>
+                <option value="cost">按 cost</option>
+                <option value="msgs">按 messages</option>
+              </select>
+              <button
+                type="button"
+                className="btn xs ghost"
+                onClick={() => exportCsv("models")}
+              >
+                CSV
+              </button>
+            </div>
           </div>
           <BarChart
             items={sortedProviders.slice(0, 12).map((p) => ({
@@ -216,6 +351,13 @@ export function Usage() {
         <section className="panel">
           <div className="panel-header">
             <h2>Tools</h2>
+            <button
+              type="button"
+              className="btn xs ghost"
+              onClick={() => exportCsv("tools")}
+            >
+              CSV
+            </button>
           </div>
           <div className="table-wrap">
             <table>
@@ -260,6 +402,13 @@ export function Usage() {
         <section className="panel">
           <div className="panel-header">
             <h2>Skills (history)</h2>
+            <button
+              type="button"
+              className="btn xs ghost"
+              onClick={() => exportCsv("skills")}
+            >
+              CSV
+            </button>
           </div>
           <div className="table-wrap">
             <table>
@@ -292,12 +441,21 @@ export function Usage() {
       <section className="panel">
         <div className="panel-header">
           <h2>Recent sessions ({sessions.length})</h2>
-          <input
-            className="input sm"
-            placeholder="Filter cwd / model / id…"
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-          />
+          <div className="row-gap">
+            <input
+              className="input sm"
+              placeholder="Filter cwd / model / id…"
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+            />
+            <button
+              type="button"
+              className="btn xs ghost"
+              onClick={() => exportCsv("sessions")}
+            >
+              CSV
+            </button>
+          </div>
         </div>
         <div className="table-wrap">
           <table>

@@ -6,6 +6,7 @@ import type {
   PackagesOverview,
   PiProcessInfo,
   PiSettings,
+  ProviderProbeResult,
   ProvidersOverview,
   RuntimeEvent,
   SkillsOverview,
@@ -52,6 +53,11 @@ export const api = {
     request<PiSettings>("/api/default-model", {
       method: "POST",
       body: JSON.stringify({ provider, model }),
+    }),
+  probeProvider: (name: string) =>
+    request<ProviderProbeResult>("/api/providers/probe", {
+      method: "POST",
+      body: JSON.stringify({ name }),
     }),
   getSettings: () => request<PiSettings>("/api/settings"),
   getUsage: () => request<UsageOverview>("/api/usage"),

@@ -7,6 +7,7 @@ import {
   deleteProvider,
   loadProvidersOverview,
   loadSettings,
+  probeProvider,
   setDefaultModel,
   upsertProvider,
 } from "./models";
@@ -108,6 +109,10 @@ const server = http.createServer(async (req, res) => {
     if (req.method === "POST" && p === "/api/default-model") {
       const body = await readBody(req);
       return send(res, 200, setDefaultModel(String(body.provider), String(body.model)));
+    }
+    if (req.method === "POST" && p === "/api/providers/probe") {
+      const body = await readBody(req);
+      return send(res, 200, await probeProvider(String(body?.name || "")));
     }
     if (req.method === "GET" && p === "/api/settings") {
       return send(res, 200, loadSettings());

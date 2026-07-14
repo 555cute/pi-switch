@@ -60,6 +60,21 @@ export interface UpsertProviderInput {
   compat?: unknown;
 }
 
+export interface ProviderProbeResult {
+  provider: string;
+  ok: boolean;
+  reachable: boolean;
+  baseUrl: string | null;
+  api: string | null;
+  status: number | null;
+  latencyMs: number;
+  message: string;
+  authUsed: boolean;
+  authSource: "auth.json" | "models.json" | "none";
+  endpoint: string | null;
+  sample?: string | null;
+}
+
 export interface ProviderUsage {
   provider: string;
   model: string;

@@ -7,11 +7,12 @@ import {
   switchDefaultModel,
   useCache,
 } from "../../store";
+import { api } from "../../api";
 import { ConfirmDialog } from "../../components/Modal";
 import { Drawer } from "../../components/Drawer";
 import { Skeleton, Tag } from "../../components/UI";
 import { toast } from "../../components/Toast";
-import type { ModelInfo, UpsertProviderInput } from "../../types";
+import type { ModelInfo, ProviderProbeResult, UpsertProviderInput } from "../../types";
 import { API_TYPES } from "../../utils";
 
 const emptyForm = (): UpsertProviderInput => ({
@@ -34,6 +35,9 @@ export function Providers() {
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
   const [confirmClearAuth, setConfirmClearAuth] = useState<string | null>(null);
   const [drawer, setDrawer] = useState<"create" | null>(null);
+  const [probing, setProbing] = useState<string | null>(null);
+  const [probeResults, setProbeResults] = useState<Record<string, ProviderProbeResult>>({});
+  const [batchProbing, setBatchProbing] = useState(false);
 
   useEffect(() => {
     ensureProviders();
@@ -188,6 +192,46 @@ export function Providers() {
     }
   };
 
+  const probeOne = async (name: string, silent = false) => {
+    setProbing(name);
+    try {
+      const r = await api.probeProvider(name);
+      setProbeResults((prev) => ({ ...prev, [name]: r }));
+      if (!silent) {
+        toast(
+          r.ok
+            ? `「${name}」连通 · ${r.latencyMs}ms`
+            : `「${name}」${r.message}`,
+          r.ok ? "ok" : r.reachable ? "info" : "err",
+        );
+      }
+      return r;
+    } catch (e) {
+      if (!silent) toast(`探测失败: ${e}`, "err");
+      return null;
+    } finally {
+      setProbing((cur) => (cur === name ? null : cur));
+    }
+  };
+
+  const probeAll = async () => {
+    if (!data?.providers.length) return;
+    setBatchProbing(true);
+    let ok = 0;
+    let fail = 0;
+    try {
+      for (const p of data.providers) {
+        const r = await probeOne(p.name, true);
+        if (r?.ok) ok += 1;
+        else fail += 1;
+      }
+      toast(`探测完成：${ok} 正常 · ${fail} 异常`, fail ? "info" : "ok");
+    } finally {
+      setBatchProbing(false);
+      setProbing(null);
+    }
+  };
+
   const noAuthCount = data.providers.filter((p) => !p.hasAuth).length;
 
   return (
@@ -210,6 +254,14 @@ export function Providers() {
           </p>
         </div>
         <div className="header-actions">
+          <button
+            type="button"
+            className="btn sm"
+            disabled={batchProbing || data.providers.length === 0}
+            onClick={() => void probeAll()}
+          >
+            {batchProbing ? "探测中…" : "全部探测"}
+          </button>
           <button
             type="button"
             className="btn sm"
@@ -247,6 +299,7 @@ export function Providers() {
           <div className="provider-list">
             {filtered.map((p) => {
               const isDefault = defaults?.defaultProvider === p.name;
+              const probe = probeResults[p.name];
               return (
                 <div
                   key={p.name}
@@ -258,12 +311,34 @@ export function Providers() {
                       {p.name}
                       {isDefault ? <Tag tone="info">默认</Tag> : null}
                     </span>
-                    <span className={`pill ${p.hasAuth ? "ok" : "warn"}`}>
-                      {p.hasAuth ? "auth" : "no key"}
+                    <span className="row-gap" style={{ gap: 6 }}>
+                      <span className={`pill ${p.hasAuth ? "ok" : "warn"}`}>
+                        {p.hasAuth ? "auth" : "no key"}
+                      </span>
+                      {probe ? (
+                        <span
+                          className={`pill ${probe.ok ? "ok" : probe.reachable ? "warn" : "warn"}`}
+                          title={probe.message}
+                        >
+                          {probe.ok ? `${probe.latencyMs}ms` : "fail"}
+                        </span>
+                      ) : null}
+                      <button
+                        type="button"
+                        className="btn xs ghost"
+                        disabled={probing === p.name || batchProbing}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          void probeOne(p.name);
+                        }}
+                      >
+                        {probing === p.name ? "…" : "测"}
+                      </button>
                     </span>
                   </div>
                   <div className="provider-meta">
                     {p.api ?? "api?"} · {p.models.length} models
+                    {probe ? ` · ${probe.message}` : ""}
                   </div>
                   <div className="provider-models">
                     {p.models.slice(0, 4).map((m) => (
@@ -458,9 +533,55 @@ export function Providers() {
           ))}
         </div>
 
+        {editing && probeResults[editing] ? (
+          <div className="probe-result" style={{ marginTop: 12 }}>
+            <div className="panel-header" style={{ padding: 0, marginBottom: 8 }}>
+              <h3>连通性</h3>
+              <Tag
+                tone={
+                  probeResults[editing].ok
+                    ? "ok"
+                    : probeResults[editing].reachable
+                      ? "warn"
+                      : "danger"
+                }
+              >
+                {probeResults[editing].ok
+                  ? "OK"
+                  : probeResults[editing].reachable
+                    ? "AUTH?"
+                    : "DOWN"}
+              </Tag>
+            </div>
+            <div className="muted small" style={{ lineHeight: 1.5 }}>
+              <div>{probeResults[editing].message}</div>
+              <div>
+                {probeResults[editing].latencyMs}ms · auth:{" "}
+                {probeResults[editing].authSource}
+                {probeResults[editing].status != null
+                  ? ` · HTTP ${probeResults[editing].status}`
+                  : ""}
+              </div>
+              {probeResults[editing].endpoint ? (
+                <div className="truncate" title={probeResults[editing].endpoint || ""}>
+                  {probeResults[editing].endpoint}
+                </div>
+              ) : null}
+            </div>
+          </div>
+        ) : null}
+
         <div className="form-actions" style={{ marginTop: 16 }}>
           {editing ? (
             <>
+              <button
+                type="button"
+                className="btn ghost sm"
+                disabled={probing === editing || batchProbing}
+                onClick={() => void probeOne(editing)}
+              >
+                {probing === editing ? "探测中…" : "测试连通"}
+              </button>
               <button
                 type="button"
                 className="btn ghost sm danger"

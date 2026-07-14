@@ -190,3 +190,203 @@ export function setDefaultModel(provider: string, model: string): PiSettings {
   writeJson(paths.settingsJson(), root);
   return loadSettings();
 }
+
+export type ProviderProbeResult = {
+  provider: string;
+  ok: boolean;
+  reachable: boolean;
+  baseUrl: string | null;
+  api: string | null;
+  status: number | null;
+  latencyMs: number;
+  message: string;
+  authUsed: boolean;
+  authSource: "auth.json" | "models.json" | "none";
+  endpoint: string | null;
+  sample?: string | null;
+};
+
+function resolveSecret(raw: string | null | undefined): string | null {
+  if (!raw || typeof raw !== "string") return null;
+  const k = raw.trim();
+  if (!k) return null;
+  if (k.startsWith("$")) {
+    const envName = k.slice(1);
+    const v = process.env[envName];
+    return v && v.trim() ? v.trim() : null;
+  }
+  // !command refs are not executed during probe for safety
+  if (k.startsWith("!")) return null;
+  return k;
+}
+
+function pickAuth(
+  provider: string,
+  cfg: any,
+): { key: string | null; source: ProviderProbeResult["authSource"] } {
+  const auth = loadAuthMap();
+  const entry = auth[provider];
+  const authKey =
+    typeof entry?.key === "string"
+      ? entry.key
+      : typeof entry === "string"
+        ? entry
+        : null;
+  const fromAuth = resolveSecret(authKey);
+  if (fromAuth) return { key: fromAuth, source: "auth.json" };
+
+  const fromModels = resolveSecret(
+    typeof cfg?.apiKey === "string" ? cfg.apiKey : null,
+  );
+  if (fromModels) return { key: fromModels, source: "models.json" };
+  return { key: null, source: "none" };
+}
+
+function buildProbeRequest(
+  baseUrl: string,
+  api: string,
+  key: string | null,
+  authHeader: boolean,
+): { url: string; headers: Record<string, string> } {
+  const base = baseUrl.replace(/\/$/, "");
+  const headers: Record<string, string> = {
+    Accept: "application/json",
+    "User-Agent": "pi-switch-probe/0.1",
+  };
+
+  if (api.includes("anthropic")) {
+    const url = /\/v\d+(\/|$)/.test(base) ? `${base}/models` : `${base}/v1/models`;
+    if (key) {
+      headers["x-api-key"] = key;
+      headers["anthropic-version"] = "2023-06-01";
+    }
+    return { url, headers };
+  }
+
+  if (api.includes("google")) {
+    const url = key
+      ? `${base}/models?key=${encodeURIComponent(key)}`
+      : `${base}/models`;
+    return { url, headers };
+  }
+
+  // openai-completions / openai-responses / generic OpenAI-compatible
+  let url: string;
+  if (base.endsWith("/models")) url = base;
+  else if (/\/v\d+$/.test(base) || base.includes("/v1")) url = `${base}/models`;
+  else url = `${base}/models`;
+
+  if (key && authHeader !== false) {
+    headers.Authorization = `Bearer ${key}`;
+  } else if (key) {
+    headers["x-api-key"] = key;
+  }
+  return { url, headers };
+}
+
+function extractSample(body: string): string | null {
+  try {
+    const json = JSON.parse(body);
+    if (Array.isArray(json?.data) && json.data[0]?.id) return String(json.data[0].id);
+    if (Array.isArray(json?.models) && json.models[0]?.name) return String(json.models[0].name);
+    if (Array.isArray(json?.models) && json.models[0]?.id) return String(json.models[0].id);
+    if (json?.id) return String(json.id);
+  } catch {
+    /* ignore */
+  }
+  return null;
+}
+
+export async function probeProvider(name: string): Promise<ProviderProbeResult> {
+  const provider = name.trim();
+  if (!provider) throw new Error("provider name is required");
+
+  const modelsRoot = (readJson(paths.modelsJson()) as any) || {};
+  const cfg = modelsRoot?.providers?.[provider];
+  const baseUrl =
+    typeof cfg?.baseUrl === "string" && cfg.baseUrl.trim() ? cfg.baseUrl.trim() : null;
+  const api =
+    typeof cfg?.api === "string" && cfg.api.trim()
+      ? cfg.api.trim()
+      : "openai-completions";
+  const authHeader = typeof cfg?.authHeader === "boolean" ? cfg.authHeader : true;
+  const { key, source } = pickAuth(provider, cfg);
+
+  if (!baseUrl) {
+    return {
+      provider,
+      ok: false,
+      reachable: false,
+      baseUrl: null,
+      api,
+      status: null,
+      latencyMs: 0,
+      message: "未配置 baseUrl，无法探测",
+      authUsed: false,
+      authSource: source,
+      endpoint: null,
+      sample: null,
+    };
+  }
+
+  const { url, headers } = buildProbeRequest(baseUrl, api, key, authHeader);
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 10_000);
+  const t0 = Date.now();
+
+  try {
+    const res = await fetch(url, {
+      method: "GET",
+      headers,
+      signal: controller.signal,
+    });
+    const latencyMs = Date.now() - t0;
+    const body = await res.text().catch(() => "");
+    const sample = extractSample(body);
+    const ok = res.status >= 200 && res.status < 300;
+
+    let message: string;
+    if (ok) message = sample ? `连通正常 · 示例模型 ${sample}` : "连通正常";
+    else if (res.status === 401 || res.status === 403)
+      message = `服务可达，但鉴权失败 (HTTP ${res.status})`;
+    else if (res.status === 404)
+      message = `服务可达，但探测路径不存在 (HTTP 404) · ${url}`;
+    else message = `HTTP ${res.status}${body ? ` · ${body.slice(0, 120)}` : ""}`;
+
+    return {
+      provider,
+      ok,
+      reachable: true,
+      baseUrl,
+      api,
+      status: res.status,
+      latencyMs,
+      message,
+      authUsed: !!key,
+      authSource: source,
+      endpoint: url,
+      sample,
+    };
+  } catch (err) {
+    const latencyMs = Date.now() - t0;
+    const aborted = err instanceof Error && err.name === "AbortError";
+    return {
+      provider,
+      ok: false,
+      reachable: false,
+      baseUrl,
+      api,
+      status: null,
+      latencyMs,
+      message: aborted
+        ? "请求超时（10s）"
+        : `网络错误: ${err instanceof Error ? err.message : String(err)}`,
+      authUsed: !!key,
+      authSource: source,
+      endpoint: url,
+      sample: null,
+    };
+  } finally {
+    clearTimeout(timer);
+  }
+}
