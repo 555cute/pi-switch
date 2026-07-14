@@ -1,0 +1,45 @@
+{
+  "name": "pi-switch",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Desktop All-in-One manager for the pi coding agent — providers, tokens, skills, packages",
+  "main": "electron/main.cjs",
+  "type": "module",
+  "scripts": {
+    "dev": "concurrently -k -n server,web -c cyan,magenta \"npm:server\" \"npm:web\"",
+    "dev:desktop": "concurrently -k -n server,web,app -c cyan,magenta,green \"npm:server\" \"npm:web\" \"npm:electron:wait\"",
+    "electron:wait": "wait-on tcp:127.0.0.1:1420 tcp:127.0.0.1:8787 && electron .",
+    "electron": "electron .",
+    "web": "vite --host 127.0.0.1 --port 1420",
+    "server": "tsx server/index.ts",
+    "build": "tsc -p tsconfig.json --noEmit && vite build",
+    "preview": "vite preview",
+    "start": "tsx server/index.ts",
+    "tauri": "tauri",
+    "tauri:dev": "tauri dev",
+    "tauri:build": "tauri build"
+  },
+  "dependencies": {
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "@tauri-apps/api": "^2",
+    "@tauri-apps/plugin-opener": "^2"
+  },
+  "devDependencies": {
+    "@types/node": "^22.15.30",
+    "@types/react": "^19.1.8",
+    "@types/react-dom": "^19.1.6",
+    "@vitejs/plugin-react": "^4.6.0",
+    "concurrently": "^9.1.2",
+    "electron": "^37.2.0",
+    "tsx": "^4.20.3",
+    "typescript": "~5.8.3",
+    "vite": "^7.0.4",
+    "wait-on": "^8.0.3",
+    "@tauri-apps/cli": "^2"
+  },
+  "allowScripts": {
+    "esbuild@0.28.1": true,
+    "electron@37.10.3": true
+  }
+}

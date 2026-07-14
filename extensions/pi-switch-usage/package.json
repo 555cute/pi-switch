@@ -1,0 +1,11 @@
+{
+  "name": "pi-switch-usage",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Optional pi extension that logs usage events for pi-switch",
+  "type": "module",
+  "main": "index.ts",
+  "pi": {
+    "extensions": ["./index.ts"]
+  }
+}
