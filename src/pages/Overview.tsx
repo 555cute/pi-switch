@@ -88,7 +88,7 @@ export function Overview({
         <header className="page-header">
           <div>
             <h1>概览 <span className="en">Dashboard</span></h1>
-            <p className="muted page-kicker">pi coding agent 控制台总览</p>
+            <p className="muted page-kicker">今日用量、默认模型与常用入口</p>
           </div>
         </header>
         <div className="stat-grid">
@@ -156,12 +156,12 @@ export function Overview({
           <h1>
             概览 <span className="en">Dashboard</span>
           </h1>
-          <p className="muted page-kicker">pi coding agent 控制台总览</p>
+          <p className="muted page-kicker">今日用量、默认模型与常用入口</p>
         </div>
         <div className="header-actions">
           <div className="status-chip">
             <span className="dot" />
-            Agent 运行中
+            本地就绪
           </div>
           <button
             type="button"

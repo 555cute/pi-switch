@@ -10,10 +10,10 @@ import type { NavRequest, TabId } from "./types";
 import "./App.css";
 
 const TABS: { id: TabId; label: string; icon: string }[] = [
-  { id: "dashboard", label: "概览", icon: "▦" },
-  { id: "manage", label: "管理", icon: "⚙" },
-  { id: "usage", label: "用量", icon: "▮" },
-  { id: "settings", label: "设置", icon: "◐" },
+  { id: "dashboard", label: "概览", icon: "⌂" },
+  { id: "manage", label: "管理", icon: "☰" },
+  { id: "usage", label: "用量", icon: "▣" },
+  { id: "settings", label: "设置", icon: "⚙" },
 ];
 
 const TAB_IDS = new Set<TabId>(["dashboard", "manage", "usage", "settings"]);
@@ -277,9 +277,9 @@ function App() {
               </button>
             ) : null}
           </div>
-          <div className="data-source-tag">
+          <div className="data-source-tag" title={cache.agentHome || "~/.pi/agent"}>
             <span className="dot" />
-            <code>~/.pi/agent</code>
+            <span>Agent</span>
           </div>
           <WindowControls />
         </div>

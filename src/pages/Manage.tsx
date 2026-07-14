@@ -5,8 +5,8 @@ import { Extensions } from "./manage/Extensions";
 type Section = "providers" | "extensions";
 
 const SECTIONS: { id: Section; label: string; icon: string }[] = [
-  { id: "providers", label: "供应商", icon: "☁" },
-  { id: "extensions", label: "扩展", icon: "⧉" },
+  { id: "providers", label: "供应商", icon: "◇" },
+  { id: "extensions", label: "扩展", icon: "▣" },
 ];
 
 export function Manage({ initial = "providers" }: { initial?: Section } = {}) {

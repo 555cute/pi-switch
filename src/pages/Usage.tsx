@@ -216,7 +216,7 @@ export function Usage() {
             用量 <span className="en">Usage</span>
           </h1>
           <p className="muted page-kicker">
-            已扫描 {data.sessionFiles} sessions · {data.scannedLines.toLocaleString()} 行
+            {data.sessionFiles} 个会话 · {data.scannedLines.toLocaleString()} 行记录
           </p>
         </div>
         <div className="header-actions">

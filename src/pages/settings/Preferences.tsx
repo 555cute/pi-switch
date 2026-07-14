@@ -170,7 +170,7 @@ export function Preferences({
           <h1>
             {current.label} <span className="en">{current.en}</span>
           </h1>
-          <p className="muted page-kicker">pi-switch 自身的偏好与配置</p>
+          <p className="muted page-kicker">调整外观、窗口与行为偏好</p>
         </div>
         <div className="header-actions">
           <input
