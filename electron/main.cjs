@@ -15,6 +15,13 @@ const fs = require("node:fs");
 
 const isDev = !app.isPackaged;
 
+/** Project / app resource root (dev: repo root, prod: resources/) */
+function appRoot() {
+  if (isDev) return path.join(__dirname, "..");
+  // electron-builder extraResources land next to app.asar
+  return process.resourcesPath;
+}
+
 // Config from disk (read lazily so we can update without restart)
 function piSwitchConfigPath() {
   if (process.platform === "win32") {
@@ -70,13 +77,16 @@ function waitForUrl(url, timeoutMs = 60000) {
 }
 
 function startWebServer() {
+  // Production loads static files from dist — no Vite process.
+  if (!isDev) return Promise.resolve(false);
+
   return new Promise((resolve) => {
     const probe = http.get(`http://127.0.0.1:${WEB_PORT}/`, (res) => {
       res.resume();
       resolve(false);
     });
     probe.on("error", () => {
-      const root = path.join(__dirname, "..");
+      const root = appRoot();
       const bin = process.platform === "win32" ? "npx.cmd" : "npx";
       webProcess = spawn(
         bin,
@@ -89,11 +99,11 @@ function startWebServer() {
           shell: process.platform === "win32",
         }
       );
-      webProcess.stdout?.on("data", (d) => isDev && process.stdout.write(`[web] ${d}`));
-      webProcess.stderr?.on("data", (d) => isDev && process.stderr.write(`[web] ${d}`));
+      webProcess.stdout?.on("data", (d) => process.stdout.write(`[web] ${d}`));
+      webProcess.stderr?.on("data", (d) => process.stderr.write(`[web] ${d}`));
       webProcess.on("exit", (code) => {
         webProcess = null;
-        if (isDev) console.log(`[web] exited ${code}`);
+        console.log(`[web] exited ${code}`);
       });
       resolve(true);
     });
@@ -117,12 +127,27 @@ function startApiServer() {
       resolve(false);
     });
     probe.on("error", () => {
-      const root = path.join(__dirname, "..");
-      const tsxCli = path.join(root, "node_modules", "tsx", "dist", "cli.mjs");
-      const serverEntry = path.join(root, "server", "index.ts");
-      const bin = process.platform === "win32" ? "npx.cmd" : "npx";
-      apiProcess = spawn(bin, ["tsx", serverEntry], {
-        cwd: root,
+      const root = appRoot();
+      let cmd;
+      let args;
+      let cwd = root;
+
+      if (isDev) {
+        // Dev: run TypeScript via tsx
+        const serverEntry = path.join(root, "server", "index.ts");
+        cmd = process.platform === "win32" ? "npx.cmd" : "npx";
+        args = ["tsx", serverEntry];
+      } else {
+        // Prod: compiled CommonJS under resources/dist-server/server/index.js
+        const compiled = path.join(root, "dist-server", "server", "index.js");
+        // Prefer Electron binary as Node (ELECTRON_RUN_AS_NODE)
+        cmd = process.execPath;
+        args = [compiled];
+        cwd = path.join(root, "dist-server");
+      }
+
+      apiProcess = spawn(cmd, args, {
+        cwd,
         env: {
           ...process.env,
           PI_SWITCH_PORT: String(API_PORT),
@@ -131,13 +156,13 @@ function startApiServer() {
         },
         stdio: "pipe",
         windowsHide: true,
-        shell: process.platform === "win32",
+        shell: isDev && process.platform === "win32",
       });
-      apiProcess.stdout?.on("data", (d) => isDev && process.stdout.write(`[api] ${d}`));
-      apiProcess.stderr?.on("data", (d) => isDev && process.stderr.write(`[api] ${d}`));
+      apiProcess.stdout?.on("data", (d) => process.stdout.write(`[api] ${d}`));
+      apiProcess.stderr?.on("data", (d) => process.stderr.write(`[api] ${d}`));
       apiProcess.on("exit", (code) => {
         apiProcess = null;
-        if (isDev) console.log(`[api] exited ${code}`);
+        console.log(`[api] exited ${code}`);
       });
       resolve(true);
     });
@@ -224,8 +249,26 @@ function createWindow() {
         );
       }
     } else {
-      const distIndex = path.join(__dirname, "..", "dist", "index.html");
-      await mainWindow.loadFile(distIndex);
+      // packaged: UI is extraResource at resources/dist/index.html
+      const candidates = [
+        path.join(process.resourcesPath, "dist", "index.html"),
+        path.join(__dirname, "..", "dist", "index.html"),
+        path.join(app.getAppPath(), "dist", "index.html"),
+      ];
+      const distIndex = candidates.find((p) => fs.existsSync(p));
+      if (!distIndex) {
+        await mainWindow.loadURL(
+          `data:text/html;charset=utf-8,` +
+            encodeURIComponent(
+              `<body style="font-family:Segoe UI,sans-serif;padding:40px">
+                <h2>pi-switch UI missing</h2>
+                <p>Could not find dist/index.html in package resources.</p>
+              </body>`,
+            ),
+        );
+      } else {
+        await mainWindow.loadFile(distIndex);
+      }
     }
   };
 

@@ -10,12 +10,14 @@ lerna-debug.log*
 # Dependencies & build
 node_modules
 dist
+dist-server
 dist-ssr
 *.local
 src-tauri/target
 *.tsbuildinfo
 .electron-out
 release
+release-out
 out
 
 # Local / agent artifacts (never publish)

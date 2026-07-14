@@ -3,6 +3,13 @@
   "private": true,
   "version": "0.1.0",
   "description": "Desktop All-in-One manager for the pi coding agent — providers, tokens, skills, packages",
+  "author": "555cute",
+  "license": "MIT",
+  "homepage": "https://github.com/555cute/pi-switch",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/555cute/pi-switch.git"
+  },
   "main": "electron/main.cjs",
   "type": "module",
   "scripts": {
@@ -12,34 +19,111 @@
     "electron": "electron .",
     "web": "vite --host 127.0.0.1 --port 1420",
     "server": "tsx server/index.ts",
-    "build": "tsc -p tsconfig.json --noEmit && vite build",
+    "build": "npm run build:web && npm run build:server",
+    "build:web": "tsc -p tsconfig.json --noEmit && vite build",
+    "build:server": "tsc -p tsconfig.server.json && node -e \"require('fs').writeFileSync('dist-server/package.json', JSON.stringify({type:'commonjs'}))\"",
     "preview": "vite preview",
     "start": "tsx server/index.ts",
+    "pack": "npm run build && electron-builder --dir --win -c.win.signAndEditExecutable=false",
+    "dist": "npm run build && electron-builder --win -c.win.signAndEditExecutable=false",
+    "dist:win": "npm run build && electron-builder --win -c.win.signAndEditExecutable=false",
+    "dist:mac": "npm run build && electron-builder --mac",
+    "dist:linux": "npm run build && electron-builder --linux",
     "tauri": "tauri",
     "tauri:dev": "tauri dev",
     "tauri:build": "tauri build"
   },
   "dependencies": {
-    "react": "^19.1.0",
-    "react-dom": "^19.1.0",
     "@tauri-apps/api": "^2",
-    "@tauri-apps/plugin-opener": "^2"
+    "@tauri-apps/plugin-opener": "^2",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0"
   },
   "devDependencies": {
+    "@tauri-apps/cli": "^2",
     "@types/node": "^22.15.30",
     "@types/react": "^19.1.8",
     "@types/react-dom": "^19.1.6",
     "@vitejs/plugin-react": "^4.6.0",
     "concurrently": "^9.1.2",
     "electron": "^37.2.0",
+    "electron-builder": "^26.15.3",
     "tsx": "^4.20.3",
     "typescript": "~5.8.3",
     "vite": "^7.0.4",
-    "wait-on": "^8.0.3",
-    "@tauri-apps/cli": "^2"
+    "wait-on": "^8.0.3"
   },
   "allowScripts": {
     "esbuild@0.28.1": true,
     "electron@37.10.3": true
+  },
+  "build": {
+    "appId": "com.pi-switch.app",
+    "productName": "pi-switch",
+    "copyright": "Copyright © 2026 555cute",
+    "directories": {
+      "output": "release",
+      "buildResources": "build"
+    },
+    "files": [
+      "electron/**/*",
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "dist",
+        "to": "dist"
+      },
+      {
+        "from": "dist-server",
+        "to": "dist-server"
+      }
+    ],
+    "asar": true,
+    "electronDist": "node_modules/electron/dist",
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "build/icon.ico",
+      "artifactName": "${productName}-${version}-${os}-${arch}.${ext}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "pi-switch",
+      "deleteAppDataOnUninstall": false
+    },
+    "mac": {
+      "target": [
+        "dmg"
+      ],
+      "icon": "build/icon.icns",
+      "category": "public.app-category.developer-tools",
+      "artifactName": "${productName}-${version}-${os}-${arch}.${ext}"
+    },
+    "linux": {
+      "target": [
+        "AppImage",
+        "deb"
+      ],
+      "icon": "build/icon.png",
+      "category": "Development",
+      "artifactName": "${productName}-${version}-${os}-${arch}.${ext}"
+    },
+    "publish": null
   }
 }

@@ -41,6 +41,22 @@ npm run dev
 # http://127.0.0.1:1420
 ```
 
+### 打包分发（Electron Builder）
+
+```bash
+npm install
+npm run pack        # 解包目录 release/win-unpacked（推荐本地调试）
+npm run dist:win    # Windows NSIS 安装包 + portable
+npm run dist:mac    # macOS dmg
+npm run dist:linux  # AppImage + deb
+```
+
+- 产物目录：`release/`
+- 本地可直接运行：`release/win-unpacked/pi-switch.exe`
+- 生产环境会启动编译后的 API（`resources/dist-server`）并加载静态 UI（`resources/dist`）
+- Windows 若杀软锁定 `release/` 目录导致 EPERM，可先关闭占用进程或改输出目录
+- NSIS/portable 需要能访问 GitHub 下载 nsis 工具；网络受限时用 `npm run pack` 即可
+
 ### Tauri（可选，需 MSVC / 系统工具链）
 
 `src-tauri/` 保留完整 Rust 实现：
@@ -91,7 +107,7 @@ pi -e ./extensions/pi-switch-usage
 - [x] 用量 CSV 导出（会话 / 按日 / 模型 / 工具 / 技能）
 - [x] Packages 页一键 `pi install` / `pi remove` / `pi update`
 - [x] 托盘快速切换默认模型
-- [ ] Electron Builder 正式打包分发
+- [x] Electron Builder 正式打包分发
 - [ ] 统一 Tauri invoke 与 HTTP API 双后端
 
 ## 贡献
