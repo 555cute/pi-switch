@@ -11,7 +11,7 @@
 |------|------|
 | **概览** | 今日 / 全量用量、默认模型、Top tools & skills |
 | **供应商** | 读写 `~/.pi/agent/models.json` / `auth.json`，切换默认模型，**连通性探测** |
-| **扩展** | Packages 与 Skills 统一管理，支持 package-level 覆盖 |
+| **扩展** | Packages / Skills 管理，**一键 install / remove / update**，package-level 覆盖 |
 | **用量** | 解析会话 JSONL 汇总 token / cost / cache / 工具调用，**CSV 导出** |
 | **设置** | 外观、窗口、缓存、快捷键、备份、进程控制、系统提示等 |
 
@@ -89,8 +89,8 @@ pi -e ./extensions/pi-switch-usage
 
 - [x] Provider 连通性探测
 - [x] 用量 CSV 导出（会话 / 按日 / 模型 / 工具 / 技能）
-- [ ] Packages 页一键 `pi install` / `pi remove`
-- [ ] 托盘快速切换默认模型
+- [x] Packages 页一键 `pi install` / `pi remove` / `pi update`
+- [x] 托盘快速切换默认模型
 - [ ] Electron Builder 正式打包分发
 - [ ] 统一 Tauri invoke 与 HTTP API 双后端
 

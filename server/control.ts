@@ -249,6 +249,130 @@ export function listAllPackagesDetail(): PackageDetail[] {
   return packages.map(loadPackageDetail).filter(Boolean) as PackageDetail[];
 }
 
+/* ========== pi CLI: install / remove ========== */
+
+export type PiCliResult = {
+  ok: boolean;
+  command: string;
+  code: number | null;
+  stdout: string;
+  stderr: string;
+  message: string;
+  spec: string;
+};
+
+function resolvePiBinary(): string {
+  if (process.env.PI_BIN && fs.existsSync(process.env.PI_BIN)) return process.env.PI_BIN;
+  // prefer PATH resolution via shell; on Windows use `pi.cmd` if present
+  if (process.platform === "win32") {
+    const candidates = [
+      path.join(process.env.APPDATA || "", "npm", "pi.cmd"),
+      path.join(process.env.APPDATA || "", "npm", "pi"),
+      path.join(process.env.LOCALAPPDATA || "", "npm", "pi.cmd"),
+    ];
+    for (const c of candidates) {
+      if (c && fs.existsSync(c)) return c;
+    }
+    return "pi.cmd";
+  }
+  return "pi";
+}
+
+function runPi(args: string[], timeoutMs = 180_000): Promise<PiCliResult> {
+  const bin = resolvePiBinary();
+  const command = [bin, ...args].join(" ");
+  return new Promise((resolve) => {
+    exec(
+      // quote carefully for Windows shell
+      process.platform === "win32"
+        ? `"${bin}" ${args.map((a) => (a.includes(" ") ? `"${a}"` : a)).join(" ")}`
+        : `${bin} ${args.map((a) => `'${a.replace(/'/g, `'"'"'`)}'`).join(" ")}`,
+      {
+        timeout: timeoutMs,
+        maxBuffer: 8 * 1024 * 1024,
+        windowsHide: true,
+        env: {
+          ...process.env,
+          // avoid interactive prompts during install/remove
+          CI: process.env.CI || "1",
+          GIT_TERMINAL_PROMPT: "0",
+        },
+      },
+      (err, stdout, stderr) => {
+        const out = String(stdout || "");
+        const errText = String(stderr || "");
+        const code =
+          err && typeof (err as any).code === "number"
+            ? (err as any).code
+            : err
+              ? 1
+              : 0;
+        const ok = code === 0;
+        const message = ok
+          ? out.trim().split(/\r?\n/).filter(Boolean).slice(-3).join(" · ") || "ok"
+          : (errText || out || err?.message || "failed").trim().slice(0, 500);
+        resolve({
+          ok,
+          command,
+          code,
+          stdout: out,
+          stderr: errText,
+          message,
+          spec: args[1] || "",
+        });
+      },
+    );
+  });
+}
+
+function normalizePackageSpec(raw: string): string {
+  const s = raw.trim();
+  if (!s) throw new Error("package source is required");
+  // allow bare npm package names
+  if (
+    !s.startsWith("npm:") &&
+    !s.startsWith("git:") &&
+    !s.startsWith("http://") &&
+    !s.startsWith("https://") &&
+    !s.startsWith("ssh://") &&
+    !s.startsWith("./") &&
+    !s.startsWith("../") &&
+    !path.isAbsolute(s) &&
+    !s.includes("\\")
+  ) {
+    return `npm:${s}`;
+  }
+  return s;
+}
+
+export async function installPackage(source: string): Promise<PiCliResult> {
+  const spec = normalizePackageSpec(source);
+  // never pass -l (local/project) from UI — always user settings
+  const result = await runPi(["install", spec, "--no-approve"]);
+  return { ...result, spec };
+}
+
+export async function removePackage(source: string): Promise<PiCliResult> {
+  const spec = source.trim();
+  if (!spec) throw new Error("package source is required");
+  const result = await runPi(["remove", spec, "--no-approve"]);
+  // also clear pi-switch overrides for this spec if present
+  try {
+    clearPackageOverrides(spec);
+  } catch {
+    /* ignore */
+  }
+  return { ...result, spec };
+}
+
+export async function updatePackage(source?: string): Promise<PiCliResult> {
+  const args = source?.trim()
+    ? ["update", source.trim(), "--no-approve"]
+    : ["update", "--extensions", "--no-approve"];
+  const result = await runPi(args);
+  return { ...result, spec: source?.trim() || "--extensions" };
+}
+
 /* ========== 配置备份/恢复 ========== */
 
 export interface BackupFile {

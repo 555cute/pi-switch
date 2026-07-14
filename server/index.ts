@@ -26,16 +26,19 @@ import {
   ensurePiSwitchDirs,
   findPiProcesses,
   getLastEvent,
+  installPackage,
   killPiProcess,
   listAllPackagesDetail,
   listBackups,
   loadPackageDetail,
   loadPrompt,
   onEvent,
+  removePackage,
   restoreBackup,
   runtimeEventsPath,
   savePrompt,
   setPackageOverrides,
+  updatePackage,
 } from "./control";
 
 const PORT = Number(process.env.PI_SWITCH_PORT || 8787);
@@ -140,6 +143,23 @@ const server = http.createServer(async (req, res) => {
     if (req.method === "POST" && p === "/api/packages/overrides/clear") {
       const body = await readBody(req);
       return send(res, 200, clearPackageOverrides(body.spec));
+    }
+    if (req.method === "POST" && p === "/api/packages/install") {
+      const body = await readBody(req);
+      const result = await installPackage(String(body?.source || body?.spec || ""));
+      return send(res, result.ok ? 200 : 500, result);
+    }
+    if (req.method === "POST" && p === "/api/packages/remove") {
+      const body = await readBody(req);
+      const result = await removePackage(String(body?.source || body?.spec || ""));
+      return send(res, result.ok ? 200 : 500, result);
+    }
+    if (req.method === "POST" && p === "/api/packages/update") {
+      const body = (await readBody(req)) || {};
+      const result = await updatePackage(
+        body?.source || body?.spec ? String(body.source || body.spec) : undefined,
+      );
+      return send(res, result.ok ? 200 : 500, result);
     }
     if (req.method === "GET" && p === "/api/agent-home") {
       return send(res, 200, { path: piAgentHome() });

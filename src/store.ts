@@ -238,6 +238,37 @@ export async function clearPackageOverrides(spec: string) {
   void ensurePackagesDetail(true);
 }
 
+export async function installPackage(source: string) {
+  const result = await api.installPackage(source);
+  state.cache.lastUpdated.packages = 0;
+  state.cache.lastUpdated.packagesDetail = 0;
+  state.cache.lastUpdated.skills = 0;
+  void ensurePackages(true);
+  void ensurePackagesDetail(true);
+  void ensureSkills(true);
+  return result;
+}
+
+export async function removePackage(source: string) {
+  const result = await api.removePackage(source);
+  state.cache.lastUpdated.packages = 0;
+  state.cache.lastUpdated.packagesDetail = 0;
+  state.cache.lastUpdated.skills = 0;
+  void ensurePackages(true);
+  void ensurePackagesDetail(true);
+  void ensureSkills(true);
+  return result;
+}
+
+export async function updatePackage(source?: string) {
+  const result = await api.updatePackage(source);
+  state.cache.lastUpdated.packages = 0;
+  state.cache.lastUpdated.packagesDetail = 0;
+  void ensurePackages(true);
+  void ensurePackagesDetail(true);
+  return result;
+}
+
 export function pushRecentEvent(e: RuntimeEvent) {
   const list = state.cache.recentEvents || [];
   state.cache = {

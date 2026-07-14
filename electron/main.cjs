@@ -241,22 +241,190 @@ function createWindow() {
   });
 }
 
+function httpJson(urlPath) {
+  return new Promise((resolve, reject) => {
+    const req = http.get(`http://127.0.0.1:${API_PORT}${urlPath}`, (res) => {
+      let data = "";
+      res.on("data", (c) => (data += c));
+      res.on("end", () => {
+        try {
+          resolve(JSON.parse(data || "{}"));
+        } catch (e) {
+          reject(e);
+        }
+      });
+    });
+    req.on("error", reject);
+    req.setTimeout(4000, () => {
+      req.destroy();
+      reject(new Error("timeout"));
+    });
+  });
+}
+
+function httpPost(urlPath, body) {
+  return new Promise((resolve, reject) => {
+    const payload = JSON.stringify(body || {});
+    const req = http.request(
+      {
+        hostname: "127.0.0.1",
+        port: API_PORT,
+        path: urlPath,
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Content-Length": Buffer.byteLength(payload),
+        },
+      },
+      (res) => {
+        let data = "";
+        res.on("data", (c) => (data += c));
+        res.on("end", () => {
+          try {
+            resolve(JSON.parse(data || "{}"));
+          } catch (e) {
+            reject(e);
+          }
+        });
+      },
+    );
+    req.on("error", reject);
+    req.setTimeout(4000, () => {
+      req.destroy();
+      reject(new Error("timeout"));
+    });
+    req.write(payload);
+    req.end();
+  });
+}
+
+async function buildTrayMenu() {
+  const template = [
+    {
+      label: "显示 pi-switch",
+      click: () => {
+        mainWindow?.show();
+        mainWindow?.focus();
+      },
+    },
+    { label: "隐藏", click: () => mainWindow?.hide() },
+    { type: "separator" },
+  ];
+
+  try {
+    const overview = await httpJson("/api/providers");
+    const settings = overview?.settings || {};
+    const providers = overview?.providers || [];
+    const current =
+      settings.defaultProvider && settings.defaultModel
+        ? `${settings.defaultProvider}/${settings.defaultModel}`
+        : "未设置";
+
+    template.push({
+      label: `默认模型: ${current}`,
+      enabled: false,
+    });
+
+    const modelItems = [];
+    for (const p of providers.slice(0, 12)) {
+      const models = (p.models || []).slice(0, 8);
+      if (!models.length) continue;
+      modelItems.push({
+        label: p.name,
+        submenu: models.map((m) => ({
+          label: m.id,
+          type: "radio",
+          checked:
+            settings.defaultProvider === p.name && settings.defaultModel === m.id,
+          click: async () => {
+            try {
+              await httpPost("/api/default-model", {
+                provider: p.name,
+                model: m.id,
+              });
+              sendNavigate({ tab: "manage", manageSection: "providers" });
+              await refreshTrayMenu();
+            } catch (err) {
+              console.error("[tray] set default model failed", err);
+            }
+          },
+        })),
+      });
+    }
+
+    if (modelItems.length) {
+      template.push({ label: "切换默认模型", submenu: modelItems });
+    } else {
+      template.push({ label: "切换默认模型", enabled: false });
+    }
+  } catch {
+    template.push({ label: "API 未就绪 · 无法加载模型", enabled: false });
+  }
+
+  template.push(
+    { type: "separator" },
+    {
+      label: "打开供应商",
+      click: () => sendNavigate({ tab: "manage", manageSection: "providers" }),
+    },
+    {
+      label: "打开用量",
+      click: () => sendNavigate({ tab: "usage" }),
+    },
+    { type: "separator" },
+    {
+      label: "退出",
+      click: () => {
+        isQuitting = true;
+        app.quit();
+      },
+    },
+  );
+
+  return Menu.buildFromTemplate(template);
+}
+
+async function refreshTrayMenu() {
+  if (!tray) return;
+  try {
+    tray.setContextMenu(await buildTrayMenu());
+  } catch (err) {
+    console.error("[tray] rebuild failed", err);
+  }
+}
+
 function createTray() {
   try {
     const iconPath = path.join(__dirname, "icon.png");
     if (!fs.existsSync(iconPath)) return;
     tray = new Tray(iconPath);
-    const menu = Menu.buildFromTemplate([
-      { label: "Show pi-switch", click: () => mainWindow?.show() },
-      { label: "Hide", click: () => mainWindow?.hide() },
-      { type: "separator" },
-      { label: "Quit", click: () => { isQuitting = true; app.quit(); } },
-    ]);
     tray.setToolTip("pi-switch");
-    tray.setContextMenu(menu);
+    tray.setContextMenu(
+      Menu.buildFromTemplate([
+        { label: "显示 pi-switch", click: () => mainWindow?.show() },
+        { type: "separator" },
+        {
+          label: "退出",
+          click: () => {
+            isQuitting = true;
+            app.quit();
+          },
+        },
+      ]),
+    );
+    // populate models once API is up
+    void refreshTrayMenu();
+    setInterval(() => void refreshTrayMenu(), 60_000);
+
     tray.on("click", () => {
       if (mainWindow?.isVisible()) mainWindow.hide();
-      else mainWindow.show();
+      else {
+        mainWindow?.show();
+        mainWindow?.focus();
+      }
+    });
+    tray.on("right-click", () => {
+      void refreshTrayMenu();
     });
   } catch (err) {
     console.error("[tray] failed:", err);

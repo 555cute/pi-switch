@@ -92,6 +92,45 @@ export const api = {
       method: "POST",
       body: JSON.stringify({ spec }),
     }),
+  installPackage: (source: string) =>
+    request<{
+      ok: boolean;
+      command: string;
+      code: number | null;
+      stdout: string;
+      stderr: string;
+      message: string;
+      spec: string;
+    }>("/api/packages/install", {
+      method: "POST",
+      body: JSON.stringify({ source }),
+    }),
+  removePackage: (source: string) =>
+    request<{
+      ok: boolean;
+      command: string;
+      code: number | null;
+      stdout: string;
+      stderr: string;
+      message: string;
+      spec: string;
+    }>("/api/packages/remove", {
+      method: "POST",
+      body: JSON.stringify({ source }),
+    }),
+  updatePackage: (source?: string) =>
+    request<{
+      ok: boolean;
+      command: string;
+      code: number | null;
+      stdout: string;
+      stderr: string;
+      message: string;
+      spec: string;
+    }>("/api/packages/update", {
+      method: "POST",
+      body: JSON.stringify(source ? { source } : {}),
+    }),
 
   /* ---- Process ---- */
   getPiProcesses: () => request<PiProcessInfo[]>("/api/processes/pi"),
