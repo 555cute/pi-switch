@@ -30,9 +30,11 @@ export interface AppSettings {
   refreshOnStartup: boolean;
 
   // 行为
-  defaultTab: "dashboard" | "providers" | "usage" | "skills" | "packages" | "settings";
+  defaultTab: "dashboard" | "manage" | "usage" | "settings";
   confirmDestructive: boolean;
   showOnboarding: boolean;
+  toastNotifications: boolean;
+  errorToasts: boolean;
 
   // 快捷键
   shortcuts: Record<string, string>; // action -> accelerator
@@ -58,16 +60,16 @@ export const DEFAULT_APP_SETTINGS: AppSettings = {
   defaultTab: "dashboard",
   confirmDestructive: true,
   showOnboarding: false,
+  toastNotifications: true,
+  errorToasts: true,
   shortcuts: {
     "window.close": "CmdOrCtrl+W",
     "window.minimize": "CmdOrCtrl+M",
     "window.refresh": "F5",
     "tab.dashboard": "CmdOrCtrl+1",
-    "tab.providers": "CmdOrCtrl+2",
+    "tab.manage": "CmdOrCtrl+2",
     "tab.usage": "CmdOrCtrl+3",
-    "tab.skills": "CmdOrCtrl+4",
-    "tab.packages": "CmdOrCtrl+5",
-    "tab.settings": "CmdOrCtrl+6",
+    "tab.settings": "CmdOrCtrl+4",
   },
 };
 
@@ -93,22 +95,59 @@ export function piSwitchLogsDir(): string {
   return path.join(piSwitchConfigDir(), "logs");
 }
 
+const LEGACY_TABS: Record<string, AppSettings["defaultTab"]> = {
+  providers: "manage",
+  skills: "manage",
+  packages: "manage",
+  control: "settings",
+  backups: "settings",
+};
+
+function normalizeDefaultTab(v: unknown): AppSettings["defaultTab"] {
+  if (typeof v !== "string") return DEFAULT_APP_SETTINGS.defaultTab;
+  if (v in LEGACY_TABS) return LEGACY_TABS[v];
+  if (v === "dashboard" || v === "manage" || v === "usage" || v === "settings") return v;
+  return DEFAULT_APP_SETTINGS.defaultTab;
+}
+
+function normalizeShortcuts(raw: Record<string, string> | undefined): Record<string, string> {
+  const base = { ...DEFAULT_APP_SETTINGS.shortcuts, ...(raw || {}) };
+  // migrate old tab.* keys
+  if (base["tab.providers"] && !raw?.["tab.manage"]) {
+    base["tab.manage"] = base["tab.providers"];
+  }
+  delete base["tab.providers"];
+  delete base["tab.skills"];
+  delete base["tab.packages"];
+  return base;
+}
+
 export function loadAppSettings(): AppSettings {
   const file = appSettingsPath();
   if (!fs.existsSync(file)) {
-    return { ...DEFAULT_APP_SETTINGS };
+    return { ...DEFAULT_APP_SETTINGS, shortcuts: { ...DEFAULT_APP_SETTINGS.shortcuts } };
   }
   try {
     const raw = JSON.parse(fs.readFileSync(file, "utf8"));
-    return { ...DEFAULT_APP_SETTINGS, ...raw, shortcuts: { ...DEFAULT_APP_SETTINGS.shortcuts, ...(raw.shortcuts || {}) } };
+    return {
+      ...DEFAULT_APP_SETTINGS,
+      ...raw,
+      defaultTab: normalizeDefaultTab(raw.defaultTab),
+      shortcuts: normalizeShortcuts(raw.shortcuts),
+    };
   } catch {
-    return { ...DEFAULT_APP_SETTINGS };
+    return { ...DEFAULT_APP_SETTINGS, shortcuts: { ...DEFAULT_APP_SETTINGS.shortcuts } };
   }
 }
 
 export function saveAppSettings(s: AppSettings): AppSettings {
   fs.mkdirSync(piSwitchConfigDir(), { recursive: true });
-  const merged = { ...DEFAULT_APP_SETTINGS, ...s, shortcuts: { ...DEFAULT_APP_SETTINGS.shortcuts, ...(s.shortcuts || {}) } };
+  const merged = {
+    ...DEFAULT_APP_SETTINGS,
+    ...s,
+    defaultTab: normalizeDefaultTab(s.defaultTab),
+    shortcuts: normalizeShortcuts(s.shortcuts),
+  };
   fs.writeFileSync(appSettingsPath(), JSON.stringify(merged, null, 2));
   return merged;
 }

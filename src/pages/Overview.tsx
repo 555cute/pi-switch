@@ -1,6 +1,6 @@
 import { useEffect, useMemo } from "react";
 import { ensureDashboard, ensureUsage, useCache } from "../store";
-import type { UsageOverview } from "../types";
+import type { NavRequest, UsageOverview } from "../types";
 import { formatCost, formatDate, formatTokens } from "../utils";
 import { Skeleton, Tag } from "../components/UI";
 import { toast } from "../components/Toast";
@@ -54,7 +54,11 @@ function splitTokens(n: number): { num: string; unit: string } {
   return { num: String(n), unit: "" };
 }
 
-export function Overview({ onNavigate }: { onNavigate: (tab: string) => void }) {
+export function Overview({
+  onNavigate,
+}: {
+  onNavigate: (target: NavRequest | string) => void;
+}) {
   const cache = useCache();
   useEffect(() => {
     ensureDashboard();
@@ -224,7 +228,7 @@ export function Overview({ onNavigate }: { onNavigate: (tab: string) => void }) 
             <button
               type="button"
               className="btn sm"
-              onClick={() => onNavigate("manage")}
+              onClick={() => onNavigate({ tab: "manage", manageSection: "providers" })}
             >
               切换
             </button>
@@ -394,7 +398,7 @@ export function Overview({ onNavigate }: { onNavigate: (tab: string) => void }) 
           <button
             type="button"
             className="quick-card"
-            onClick={() => onNavigate("manage")}
+            onClick={() => onNavigate({ tab: "manage", manageSection: "providers" })}
           >
             <div className="quick-icon blue">☁</div>
             <div className="quick-text">
@@ -406,7 +410,7 @@ export function Overview({ onNavigate }: { onNavigate: (tab: string) => void }) 
           <button
             type="button"
             className="quick-card"
-            onClick={() => onNavigate("manage")}
+            onClick={() => onNavigate({ tab: "manage", manageSection: "extensions" })}
           >
             <div className="quick-icon orange">⧉</div>
             <div className="quick-text">
@@ -430,12 +434,36 @@ export function Overview({ onNavigate }: { onNavigate: (tab: string) => void }) 
           <button
             type="button"
             className="quick-card"
-            onClick={() => onNavigate("settings")}
+            onClick={() => onNavigate({ tab: "settings", settingsLeaf: "control" })}
           >
             <div className="quick-icon violet">▷</div>
             <div className="quick-text">
-              <div className="quick-title">工具</div>
-              <div className="quick-desc">进程 / 实时事件 / 备份</div>
+              <div className="quick-title">进程与事件</div>
+              <div className="quick-desc">进程列表 / 实时 SSE 事件</div>
+            </div>
+            <div className="quick-arrow">›</div>
+          </button>
+          <button
+            type="button"
+            className="quick-card"
+            onClick={() => onNavigate({ tab: "settings", settingsLeaf: "backups" })}
+          >
+            <div className="quick-icon teal">◉</div>
+            <div className="quick-text">
+              <div className="quick-title">备份与恢复</div>
+              <div className="quick-desc">models / auth / settings 快照</div>
+            </div>
+            <div className="quick-arrow">›</div>
+          </button>
+          <button
+            type="button"
+            className="quick-card"
+            onClick={() => onNavigate({ tab: "settings", settingsLeaf: "theme" })}
+          >
+            <div className="quick-icon blue">◐</div>
+            <div className="quick-text">
+              <div className="quick-title">外观设置</div>
+              <div className="quick-desc">主题 / 字体 / 动效</div>
             </div>
             <div className="quick-arrow">›</div>
           </button>

@@ -18,13 +18,9 @@ import type {
 
 export type TabId =
   | "dashboard"
-  | "providers"
+  | "manage"
   | "usage"
-  | "skills"
-  | "packages"
-  | "settings"
-  | "control"
-  | "backups";
+  | "settings";
 
 type Cache = {
   dashboard?: DashboardStats;

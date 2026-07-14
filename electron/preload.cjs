@@ -21,4 +21,9 @@ contextBridge.exposeInMainWorld("piSwitchDesktop", {
     ipcRenderer.on("window-state", handler);
     return () => ipcRenderer.removeListener("window-state", handler);
   },
+  onNavigate: (cb) => {
+    const handler = (_e, payload) => cb(payload);
+    ipcRenderer.on("navigate", handler);
+    return () => ipcRenderer.removeListener("navigate", handler);
+  },
 });

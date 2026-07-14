@@ -113,6 +113,11 @@ export function Preferences({
     if (!draft) return;
     setSaving(true);
     try {
+      const { setToastPrefs } = await import("../../components/Toast");
+      setToastPrefs({
+        toastNotifications: draft.toastNotifications !== false,
+        errorToasts: draft.errorToasts !== false,
+      });
       await saveAppSettings(draft);
       toast("已保存设置", "ok");
     } catch (e) {
@@ -210,7 +215,7 @@ export function Preferences({
         {section === "cache" ? <CacheSection draft={draft} set={set} /> : null}
         {section === "general" ? <GeneralSection draft={draft} set={set} /> : null}
         {section === "privacy" ? <PrivacySection draft={draft} set={set} /> : null}
-        {section === "notifications" ? <NotificationsSection /> : null}
+        {section === "notifications" ? <NotificationsSection draft={draft} set={set} /> : null}
         {section === "shortcuts" ? <ShortcutsSection draft={draft} set={set} /> : null}
         {section === "prompt" ? <PromptSection /> : null}
         {section === "developer" ? <DeveloperSection draft={draft} /> : null}
@@ -576,22 +581,38 @@ function PrivacySection({
   );
 }
 
-function NotificationsSection() {
+function NotificationsSection({
+  draft,
+  set,
+}: {
+  draft: AppSettings;
+  set: <K extends keyof AppSettings>(k: K, v: AppSettings[K]) => void;
+}) {
   return (
     <div className="settings-stack">
       <SettingCard title="通知">
         <SettingRow
           label="操作结果 Toast"
           description="保存、删除、刷新成功后右下角提示"
-          control={<Toggle checked={true} onChange={() => {}} />}
+          control={
+            <Toggle
+              checked={draft.toastNotifications !== false}
+              onChange={(v) => set("toastNotifications", v)}
+            />
+          }
         />
         <SettingRow
           label="错误提示"
           description="接口失败时显示错误 toast"
-          control={<Toggle checked={true} onChange={() => {}} />}
+          control={
+            <Toggle
+              checked={draft.errorToasts !== false}
+              onChange={(v) => set("errorToasts", v)}
+            />
+          }
         />
       </SettingCard>
-      <p className="muted small">通知偏好会在后续版本持久化到设置文件。</p>
+      <p className="muted small">修改后立即生效；保存设置后会写入配置文件。</p>
     </div>
   );
 }
@@ -616,6 +637,16 @@ function DeveloperSection({ draft }: { draft: AppSettings }) {
     </div>
   );
 }
+
+const SHORTCUT_LABELS: Record<string, string> = {
+  "tab.dashboard": "概览",
+  "tab.manage": "管理",
+  "tab.usage": "用量",
+  "tab.settings": "设置",
+  "window.close": "关闭窗口",
+  "window.minimize": "最小化",
+  "window.refresh": "刷新",
+};
 
 function ShortcutsSection({
   draft,
@@ -642,7 +673,8 @@ function ShortcutsSection({
           {g.items.map(([action, accel]) => (
             <SettingRow
               key={action}
-              label={action}
+              label={SHORTCUT_LABELS[action] || action}
+              description={action}
               control={
                 <ShortcutInput
                   value={accel}
@@ -657,7 +689,7 @@ function ShortcutsSection({
       ))}
       <p className="muted small">
         点击右侧输入框，按下要设置的组合键（支持 Ctrl / Alt / Shift + 任意键）。
-        留空 = 不绑定。修改后需重启 pi-switch 才会生效。
+        留空 = 不绑定。标签页快捷键在应用内即时生效；全局窗口快捷键需重启。
       </p>
     </div>
   );

@@ -6,7 +6,21 @@ let counter = 0;
 const listeners = new Set<(t: Toast) => void>();
 let queue: Toast[] = [];
 
+let prefs = {
+  toastNotifications: true,
+  errorToasts: true,
+};
+
+export function setToastPrefs(next: {
+  toastNotifications?: boolean;
+  errorToasts?: boolean;
+}) {
+  prefs = { ...prefs, ...next };
+}
+
 export function toast(text: string, type: "ok" | "err" | "info" = "ok") {
+  if (type === "err" && !prefs.errorToasts) return;
+  if (type !== "err" && !prefs.toastNotifications) return;
   const t: Toast = { id: ++counter, type, text };
   queue.push(t);
   for (const l of listeners) l(t);

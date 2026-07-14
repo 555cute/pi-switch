@@ -172,7 +172,10 @@ function createWindow() {
   });
 
   mainWindow.once("ready-to-show", () => {
-    mainWindow?.show();
+    // honor startMinimized — keep window hidden, tray remains available
+    if (!appSettings.startMinimized) {
+      mainWindow?.show();
+    }
   });
 
   mainWindow.on("close", (e) => {
@@ -310,17 +313,47 @@ ipcMain.handle("app:quit", () => {
 });
 
 /* ---- Global shortcuts ---- */
+function sendNavigate(payload) {
+  if (!mainWindow) return;
+  if (!mainWindow.isVisible()) mainWindow.show();
+  mainWindow.focus();
+  mainWindow.webContents.send("navigate", payload);
+}
+
 function applyShortcuts() {
   globalShortcut.unregisterAll();
-  const sc = appSettings.shortcuts || {};
+  const sc = {
+    "window.close": "CmdOrCtrl+W",
+    "window.minimize": "CmdOrCtrl+M",
+    "window.refresh": "F5",
+    "tab.dashboard": "CmdOrCtrl+1",
+    "tab.manage": "CmdOrCtrl+2",
+    "tab.usage": "CmdOrCtrl+3",
+    "tab.settings": "CmdOrCtrl+4",
+    ...(appSettings.shortcuts || {}),
+  };
+  // drop legacy keys
+  delete sc["tab.providers"];
+  delete sc["tab.skills"];
+  delete sc["tab.packages"];
+
   const map = {
     "window.close": () => mainWindow?.close(),
     "window.minimize": () => mainWindow?.minimize(),
+    "window.refresh": () => mainWindow?.webContents.reload(),
+    "tab.dashboard": () => sendNavigate({ tab: "dashboard" }),
+    "tab.manage": () => sendNavigate({ tab: "manage" }),
+    "tab.usage": () => sendNavigate({ tab: "usage" }),
+    "tab.settings": () => sendNavigate({ tab: "settings" }),
   };
   for (const [action, accel] of Object.entries(sc)) {
     const fn = map[action];
     if (!fn || !accel) continue;
-    try { globalShortcut.register(accel, fn); } catch { /* ignore */ }
+    try {
+      globalShortcut.register(accel, fn);
+    } catch {
+      /* ignore conflicts */
+    }
   }
 }
 

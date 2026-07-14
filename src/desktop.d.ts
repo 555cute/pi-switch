@@ -19,6 +19,13 @@ declare global {
       relaunch?: () => Promise<void>;
       hide?: () => Promise<void>;
       quit?: () => Promise<void>;
+      onNavigate?: (
+        cb: (payload: {
+          tab?: string;
+          manageSection?: string;
+          settingsLeaf?: string;
+        }) => void,
+      ) => () => void;
     };
   }
 }

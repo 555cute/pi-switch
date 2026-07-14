@@ -159,6 +159,13 @@ export type TabId =
   | "usage"
   | "settings";
 
+/** Deep-link navigation payload used by App / Overview / search. */
+export type NavRequest = {
+  tab: TabId;
+  manageSection?: "providers" | "extensions";
+  settingsLeaf?: string;
+};
+
 /* ---- Control / runtime types ---- */
 
 export interface PackageDetail {
@@ -219,5 +226,7 @@ export interface AppSettings {
   defaultTab: TabId;
   confirmDestructive: boolean;
   showOnboarding: boolean;
+  toastNotifications: boolean;
+  errorToasts: boolean;
   shortcuts: Record<string, string>;
 }

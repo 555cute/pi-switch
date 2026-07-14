@@ -630,6 +630,8 @@ code { font-family: var(--mono); font-size: 0.9em; }
 .quick-icon.blue { background: var(--accent-soft); color: var(--accent); }
 .quick-icon.violet { background: rgba(94, 92, 230, 0.1); color: var(--accent-2); }
 .quick-icon.orange { background: var(--orange-soft); color: var(--orange); }
+.quick-icon.teal { background: rgba(50, 173, 230, 0.12); color: #32ade6; }
+.quick-icon.slate { background: rgba(142, 142, 147, 0.14); color: #636366; }
 
 .quick-title { font-weight: 600; font-size: 13px; letter-spacing: -0.015em; }
 .quick-desc { color: var(--muted); font-size: 12px; margin-top: 2px; letter-spacing: -0.005em; }

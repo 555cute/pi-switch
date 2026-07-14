@@ -1,8 +1,10 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Preferences, type PrefSection } from "./settings/Preferences";
 import { Backups } from "./settings/Backups";
 import { Control } from "./settings/Control";
 import { Tag } from "../components/UI";
+import { toast } from "../components/Toast";
+import { useCache } from "../store";
 
 export type SettingsLeaf =
   | PrefSection
@@ -247,6 +249,43 @@ export function Settings({
 }
 
 function DiagnosticsPanel() {
+  const cache = useCache();
+  const port = cache.appSettings?.apiPort || 8787;
+  const base = import.meta.env.VITE_API_BASE || `http://127.0.0.1:${port}`;
+  const [apiStatus, setApiStatus] = useState<"checking" | "ok" | "err">("checking");
+  const [apiDetail, setApiDetail] = useState("探测中…");
+  const [latency, setLatency] = useState<number | null>(null);
+  const [version, setVersion] = useState<string>("—");
+
+  const runCheck = async () => {
+    setApiStatus("checking");
+    setApiDetail("探测中…");
+    const t0 = performance.now();
+    try {
+      const res = await fetch(`${base}/api/health`, { cache: "no-store" });
+      const ms = Math.round(performance.now() - t0);
+      setLatency(ms);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json().catch(() => ({}));
+      setApiStatus("ok");
+      setApiDetail(typeof data?.ok === "boolean" ? `ok=${data.ok}` : "reachable");
+    } catch (e) {
+      setApiStatus("err");
+      setApiDetail(String(e));
+      setLatency(null);
+    }
+    try {
+      const v = await window.piSwitchDesktop?.getVersion?.();
+      if (v) setVersion(String(v));
+    } catch {
+      /* ignore */
+    }
+  };
+
+  useEffect(() => {
+    void runCheck();
+  }, [base]);
+
   return (
     <div className="settings-pane">
       <header className="page-header">
@@ -256,6 +295,11 @@ function DiagnosticsPanel() {
           </h1>
           <p className="muted page-kicker">检查本地服务、路径与运行状态</p>
         </div>
+        <div className="header-actions">
+          <button type="button" className="btn sm" onClick={() => void runCheck()}>
+            重新检测
+          </button>
+        </div>
       </header>
       <div className="settings-stack">
         <section className="setting-card">
@@ -264,38 +308,48 @@ function DiagnosticsPanel() {
             <div className="setting-row">
               <div className="setting-row-text">
                 <div className="setting-row-label">API 服务</div>
-                <div className="setting-row-desc">http://127.0.0.1:8787/api/health</div>
+                <div className="setting-row-desc">{base}/api/health</div>
               </div>
               <div className="setting-row-control">
-                <Tag tone="ok">online</Tag>
+                {apiStatus === "checking" ? (
+                  <Tag tone="warn">checking</Tag>
+                ) : apiStatus === "ok" ? (
+                  <Tag tone="ok">online{latency != null ? ` · ${latency}ms` : ""}</Tag>
+                ) : (
+                  <Tag tone="danger">offline</Tag>
+                )}
               </div>
             </div>
             <div className="setting-row">
               <div className="setting-row-text">
-                <div className="setting-row-label">Vite 开发服务</div>
-                <div className="setting-row-desc">前端 HMR 与静态资源</div>
-              </div>
-              <div className="setting-row-control">
-                <Tag tone="info">dev</Tag>
+                <div className="setting-row-label">探测详情</div>
+                <div className="setting-row-desc">{apiDetail}</div>
               </div>
             </div>
             <div className="setting-row">
               <div className="setting-row-text">
-                <div className="setting-row-label">配置目录</div>
-                <div className="setting-row-desc">%APPDATA%\\pi-switch 或 ~/.config/pi-switch</div>
+                <div className="setting-row-label">运行环境</div>
+                <div className="setting-row-desc">
+                  {window.piSwitchDesktop?.isDesktop ? "Electron 桌面" : "浏览器"} · v{version}
+                </div>
+              </div>
+              <div className="setting-row-control">
+                <Tag tone="info">{import.meta.env.DEV ? "dev" : "prod"}</Tag>
+              </div>
+            </div>
+            <div className="setting-row">
+              <div className="setting-row-text">
+                <div className="setting-row-label">Agent home</div>
+                <div className="setting-row-desc">{cache.agentHome || "未加载"}</div>
               </div>
               <div className="setting-row-control">
                 <button
                   type="button"
                   className="btn sm"
-                  onClick={() => {
-                    // best-effort open
-                    window.piSwitchDesktop?.openPath?.(
-                      (window as any).process?.env?.APPDATA
-                        ? `${(window as any).process.env.APPDATA}\\pi-switch`
-                        : "",
-                    );
-                  }}
+                  disabled={!cache.agentHome}
+                  onClick={() =>
+                    cache.agentHome && window.piSwitchDesktop?.openPath?.(cache.agentHome)
+                  }
                 >
                   打开
                 </button>
@@ -308,16 +362,19 @@ function DiagnosticsPanel() {
           <div className="setting-card-body">
             <div className="setting-row">
               <div className="setting-row-text">
-                <div className="setting-row-label">刷新缓存</div>
-                <div className="setting-row-desc">如果页面数据过旧，可强制刷新全部接口</div>
+                <div className="setting-row-label">刷新应用</div>
+                <div className="setting-row-desc">重新加载前端资源与缓存</div>
               </div>
               <div className="setting-row-control">
                 <button
                   type="button"
                   className="btn sm"
-                  onClick={() => window.location.reload()}
+                  onClick={() => {
+                    toast("正在刷新…", "info");
+                    window.location.reload();
+                  }}
                 >
-                  刷新应用
+                  刷新
                 </button>
               </div>
             </div>
