@@ -3190,3 +3190,57 @@ html[data-theme="dark"] .app-root {
   background: var(--bg) !important;
 }
 
+
+/* Settings nav: quiet text-only rows (no colorful icons) */
+.settings-nav-item {
+  gap: 8px !important;
+  min-height: 36px !important;
+  padding: 7px 10px !important;
+}
+
+.settings-nav-icon {
+  display: none !important;
+}
+
+.settings-nav-text {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.settings-nav-label {
+  font-size: 13px !important;
+  font-weight: 500 !important;
+  letter-spacing: -0.01em;
+  color: var(--text);
+}
+
+.settings-nav-en {
+  font-size: 11px !important;
+  color: var(--muted-2) !important;
+  font-weight: 400 !important;
+}
+
+.settings-nav-item.active {
+  background: #ffffff !important;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.03) !important;
+  color: var(--text) !important;
+}
+
+.settings-nav-item.active .settings-nav-label {
+  font-weight: 600 !important;
+}
+
+.settings-nav-item.active .settings-nav-en {
+  color: var(--muted) !important;
+  opacity: 1 !important;
+}
+
+.settings-nav-count {
+  background: transparent !important;
+  border: none !important;
+  color: var(--muted-2) !important;
+  font-variant-numeric: tabular-nums;
+}
+

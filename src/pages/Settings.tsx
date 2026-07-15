@@ -19,8 +19,6 @@ type NavItem = {
   id: SettingsLeaf;
   label: string;
   en: string;
-  icon: string;
-  color: string;
   keywords: string;
 };
 
@@ -35,63 +33,63 @@ const NAV_GROUPS: NavGroup[] = [
     id: "look",
     label: "外观",
     items: [
-      { id: "theme", label: "主题", en: "Theme", icon: "◐", color: "#0a84ff", keywords: "theme light dark auto 主题 浅色 深色" },
-      { id: "typography", label: "字体与排版", en: "Typography", icon: "Aa", color: "#5e5ce6", keywords: "font size radius 字体 字号 圆角" },
-      { id: "motion", label: "动效", en: "Motion", icon: "✦", color: "#bf5af2", keywords: "animation motion 动画 动效" },
+      { id: "theme", label: "主题", en: "Theme", keywords: "theme light dark auto 主题 浅色 深色" },
+      { id: "typography", label: "字体与排版", en: "Typography", keywords: "font size radius 字体 字号 圆角" },
+      { id: "motion", label: "动效", en: "Motion", keywords: "animation motion 动画 动效" },
     ],
   },
   {
     id: "window",
     label: "窗口",
     items: [
-      { id: "startup", label: "启动与关闭", en: "Startup", icon: "▷", color: "#ff9f0a", keywords: "launch tray minimize 启动 托盘 关闭" },
-      { id: "layout", label: "尺寸与布局", en: "Layout", icon: "▢", color: "#ff9f0a", keywords: "width height size 尺寸 宽度 高度" },
+      { id: "startup", label: "启动与关闭", en: "Startup", keywords: "launch tray minimize 启动 托盘 关闭" },
+      { id: "layout", label: "尺寸与布局", en: "Layout", keywords: "width height size 尺寸 宽度 高度" },
     ],
   },
   {
     id: "data",
     label: "数据",
     items: [
-      { id: "agent", label: "Agent 路径", en: "Agent Path", icon: "◈", color: "#30d158", keywords: "agent home path 路径" },
-      { id: "network", label: "网络连接", en: "Network", icon: "☁", color: "#64d2ff", keywords: "api port network 端口 连接" },
-      { id: "cache", label: "缓存与刷新", en: "Cache", icon: "⟳", color: "#34c759", keywords: "cache ttl refresh 缓存 刷新" },
+      { id: "agent", label: "Agent 路径", en: "Agent Path", keywords: "agent home path 路径" },
+      { id: "network", label: "网络连接", en: "Network", keywords: "api port network 端口 连接" },
+      { id: "cache", label: "缓存与刷新", en: "Cache", keywords: "cache ttl refresh 缓存 刷新" },
     ],
   },
   {
     id: "behavior",
     label: "行为",
     items: [
-      { id: "general", label: "通用", en: "General", icon: "◉", color: "#bf5af2", keywords: "default tab onboarding 默认 引导" },
-      { id: "privacy", label: "隐私与确认", en: "Privacy", icon: "◎", color: "#ff453a", keywords: "confirm destructive privacy 确认 危险" },
-      { id: "notifications", label: "通知", en: "Notifications", icon: "◉", color: "#ff9f0a", keywords: "toast notify 通知 提示" },
+      { id: "general", label: "通用", en: "General", keywords: "default tab onboarding 默认 引导" },
+      { id: "privacy", label: "隐私与确认", en: "Privacy", keywords: "confirm destructive privacy 确认 危险" },
+      { id: "notifications", label: "通知", en: "Notifications", keywords: "toast notify 通知 提示" },
     ],
   },
   {
     id: "ops",
     label: "运维",
     items: [
-      { id: "backups", label: "备份与恢复", en: "Backups", icon: "◉", color: "#34c759", keywords: "backup restore 备份 恢复" },
-      { id: "control", label: "进程控制", en: "Processes", icon: "▷", color: "#5e5ce6", keywords: "process kill 进程" },
-      { id: "events", label: "事件日志", en: "Events", icon: "▮", color: "#0a84ff", keywords: "event log runtime 事件 日志" },
-      { id: "diagnostics", label: "诊断", en: "Diagnostics", icon: "⊘", color: "#ff453a", keywords: "health diagnose 诊断 健康" },
+      { id: "backups", label: "备份与恢复", en: "Backups", keywords: "backup restore 备份 恢复" },
+      { id: "control", label: "进程控制", en: "Processes", keywords: "process kill 进程" },
+      { id: "events", label: "事件日志", en: "Events", keywords: "event log runtime 事件 日志" },
+      { id: "diagnostics", label: "诊断", en: "Diagnostics", keywords: "health diagnose 诊断 健康" },
     ],
   },
   {
     id: "advanced",
     label: "高级",
     items: [
-      { id: "shortcuts", label: "快捷键", en: "Shortcuts", icon: "⌘", color: "#ff453a", keywords: "hotkey shortcut 快捷键" },
-      { id: "prompt", label: "系统提示", en: "Prompt", icon: "✎", color: "#64d2ff", keywords: "prompt system 提示词" },
-      { id: "developer", label: "开发者", en: "Developer", icon: "</>", color: "#8e8e93", keywords: "developer debug 开发者" },
+      { id: "shortcuts", label: "快捷键", en: "Shortcuts", keywords: "hotkey shortcut 快捷键" },
+      { id: "prompt", label: "系统提示", en: "Prompt", keywords: "prompt system 提示词" },
+      { id: "developer", label: "开发者", en: "Developer", keywords: "developer debug 开发者" },
     ],
   },
   {
     id: "meta",
     label: "关于",
     items: [
-      { id: "about", label: "关于", en: "About", icon: "ⓘ", color: "#8e8e93", keywords: "version platform 版本" },
-      { id: "updates", label: "更新", en: "Updates", icon: "↑", color: "#0a84ff", keywords: "update check 更新" },
-      { id: "licenses", label: "开源许可", en: "Licenses", icon: "§", color: "#8e8e93", keywords: "license open source 许可" },
+      { id: "about", label: "关于", en: "About", keywords: "version platform 版本" },
+      { id: "updates", label: "更新", en: "Updates", keywords: "update check 更新" },
+      { id: "licenses", label: "开源许可", en: "Licenses", keywords: "license open source 许可" },
     ],
   },
 ];
@@ -195,15 +193,6 @@ export function Settings({
                         className={`settings-nav-item ${leaf === item.id ? "active" : ""}`}
                         onClick={() => setLeaf(item.id)}
                       >
-                        <span
-                          className="settings-nav-icon"
-                          style={{
-                            background: `${item.color}1A`,
-                            color: item.color,
-                          }}
-                        >
-                          {item.icon}
-                        </span>
                         <span className="settings-nav-text">
                           <span className="settings-nav-label">{item.label}</span>
                           <span className="settings-nav-en">{item.en}</span>
