@@ -14,7 +14,7 @@ import {
   useCache,
 } from "./store";
 import { api } from "./api";
-import type { NavRequest, TabId } from "./types";
+import type { ManageSection, NavRequest, TabId } from "./types";
 import "./App.css";
 
 const TABS: { id: TabId; label: string; icon?: string }[] = [
@@ -49,7 +49,7 @@ function applyTheme(theme: "light" | "dark" | "auto") {
 
 function App() {
   const [tab, setTab] = useState<TabId>("dashboard");
-  const [manageSection, setManageSection] = useState<"providers" | "extensions">("providers");
+  const [manageSection, setManageSection] = useState<ManageSection>("providers");
   const [settingsLeaf, setSettingsLeaf] = useState<SettingsLeaf>("theme");
   const [navEpoch, setNavEpoch] = useState(0);
   const [defaultApplied, setDefaultApplied] = useState(false);
@@ -206,7 +206,7 @@ function App() {
           tab: "manage",
           title: s.name,
           meta: "skill",
-          nav: { tab: "manage", manageSection: "extensions" },
+          nav: { tab: "manage", manageSection: "packages" },
         });
       }
     }
@@ -216,7 +216,7 @@ function App() {
           tab: "manage",
           title: p.name,
           meta: "package",
-          nav: { tab: "manage", manageSection: "extensions" },
+          nav: { tab: "manage", manageSection: "packages" },
         });
       }
     }

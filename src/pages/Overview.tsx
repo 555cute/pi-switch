@@ -190,14 +190,6 @@ export function Overview({
               <Tag tone="info">{todayPct}%</Tag>
             ) : null}
           </div>
-          <div className="stat-side">
-            {data.today.totalTokens > 0 ? (
-              <Tag tone="info">今日</Tag>
-            ) : (
-              <Tag>—</Tag>
-            )}
-            <Sparkline points={dayPoints} color="var(--accent)" width={60} height={22} />
-          </div>
         </div>
 
         <div className="stat-card">
@@ -208,7 +200,7 @@ export function Overview({
           </div>
           <div className="stat-hint">{data.totals.messages} 条消息</div>
           <div className="stat-side">
-            <Sparkline points={dayPoints} color="var(--muted-2)" width={50} height={18} />
+            <Sparkline points={dayPoints} color="var(--accent)" width={56} height={20} />
           </div>
         </div>
 
@@ -216,18 +208,18 @@ export function Overview({
           <div className="stat-label">默认模型</div>
           <div
             className="stat-value"
-            style={{ fontSize: 15, marginTop: 2, letterSpacing: 0, lineHeight: 1.15 }}
+            style={{ fontSize: 15, marginTop: 2, letterSpacing: 0, lineHeight: 1.2 }}
           >
             {modelLabel}
           </div>
-          <div className="model-pill">
+          <div className="stat-hint">
             <span className="tag">{data.defaultProvider ?? "—"}</span>
             <span className="online">● ready</span>
           </div>
-          <div className="stat-side" style={{ top: 10, right: 10 }}>
+          <div className="stat-side" style={{ top: 12, right: 12 }}>
             <button
               type="button"
-              className="btn sm"
+              className="btn xs"
               onClick={() => onNavigate({ tab: "manage", manageSection: "providers" })}
             >
               切换
@@ -236,7 +228,7 @@ export function Overview({
         </div>
 
         <div className="stat-card">
-          <div className="stat-label">Sessions</div>
+          <div className="stat-label">资源</div>
           <div className="stat-value">{data.sessionFiles}</div>
           <div className="stat-hint">
             {data.providerCount} 供 · {data.skillCount} 技 · {data.packageCount} 扩
@@ -410,7 +402,7 @@ export function Overview({
           <button
             type="button"
             className="quick-card"
-            onClick={() => onNavigate({ tab: "manage", manageSection: "extensions" })}
+            onClick={() => onNavigate({ tab: "manage", manageSection: "packages" })}
           >
             <div className="quick-icon orange">⧉</div>
             <div className="quick-text">

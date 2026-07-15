@@ -207,9 +207,10 @@ export type TabId =
   | "settings";
 
 /** Deep-link navigation payload used by App / Overview / search. */
+export type ManageSection = "providers" | "packages" | "skills";
 export type NavRequest = {
   tab: TabId;
-  manageSection?: "providers" | "extensions";
+  manageSection?: ManageSection;
   settingsLeaf?: string;
 };
 
