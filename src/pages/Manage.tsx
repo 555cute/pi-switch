@@ -13,7 +13,7 @@ export function Manage({ initial = "providers" }: { initial?: Section } = {}) {
   const [section, setSection] = useState<Section>(initial);
 
   return (
-    <div className="page">
+    <div className="page manage-page">
       <div className="sub-tabs sub-tabs-top">
         {SECTIONS.map((s) => (
           <button
@@ -27,7 +27,9 @@ export function Manage({ initial = "providers" }: { initial?: Section } = {}) {
           </button>
         ))}
       </div>
-      {section === "providers" ? <Providers /> : <Extensions />}
+      <div className="manage-body">
+        {section === "providers" ? <Providers /> : <Extensions />}
+      </div>
     </div>
   );
 }

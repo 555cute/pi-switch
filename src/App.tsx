@@ -288,7 +288,11 @@ function App() {
       </header>
 
       <main className="content">
-        <div className="content-scroll">
+        <div
+          className={`content-scroll ${
+            tab === "settings" ? "content-scroll--fill" : ""
+          } ${tab === "manage" ? "content-scroll--manage" : ""}`}
+        >
           {tab === "dashboard" ? <Overview onNavigate={navigate} /> : null}
           {tab === "manage" ? (
             <Manage key={`manage-${manageSection}-${navEpoch}`} initial={manageSection} />
