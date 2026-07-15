@@ -528,6 +528,38 @@ export function Usage() {
   const realTokens = allTotals.input + allTotals.output + allTotals.cacheRead;
   const totalRequests = allTotals.messages;
 
+  /* workspace-level cost: aggregate every session using synced pricing.
+     Falls back to stored totals.cost when pricing is missing. */
+  const { totalComputedCost, costSource, costMatched, costSessions } = useMemo(() => {
+    if (!data) {
+      return {
+        totalComputedCost: 0,
+        costSource: "unknown" as const,
+        costMatched: 0,
+        costSessions: 0,
+      };
+    }
+    let sum = 0;
+    let matched = 0;
+    let src: "synced" | "stored" | "unknown" = "unknown";
+    for (const s of data.sessions) {
+      const c = computeSessionCost(s, effectivePricing);
+      sum += c.cost;
+      if (c.source === "synced") {
+        matched += 1;
+        src = "synced";
+      } else if (c.source === "stored" && c.cost > 0) {
+        src = src === "synced" ? "synced" : "stored";
+      }
+    }
+    return {
+      totalComputedCost: sum,
+      costSource: src,
+      costMatched: matched,
+      costSessions: data.sessions.length,
+    };
+  }, [data, effectivePricing]);
+
   return (
     <div className="page usage-page">
       <header className="page-header">
@@ -670,9 +702,18 @@ export function Usage() {
           </div>
           <div className="usage-hero-stat">
             <div className="usage-hero-stat-label">总成本</div>
-            <div className="usage-hero-stat-value">
+            <div
+              className="usage-hero-stat-value"
+              title={
+                costSource === "synced"
+                  ? `按联网定价计算（${costMatched}/${costSessions} 个会话）`
+                  : costSource === "stored"
+                    ? "来自会话记录中的 cost 字段"
+                    : "未找到定价"
+              }
+            >
               <span className="usage-hero-stat-ico green">$</span>
-              {formatCost(allTotals.cost)}
+              {formatCost(totalComputedCost)}
             </div>
           </div>
         </div>
