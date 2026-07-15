@@ -332,6 +332,12 @@ export function Usage() {
     return hourlyToPoints(data.byHour, trend);
   }, [data, trend]);
 
+  /* pricing groups (must be before any conditional return) */
+  const pricingGroups = useMemo(
+    () => groupPricing(data?.pricing ?? []),
+    [data],
+  );
+
   if (!data || !allTotals) {
     return (
       <div className="page">
@@ -359,9 +365,6 @@ export function Usage() {
   /* hero "真实消耗 Tokens": cumulative (sum of input+output+cache) without cache write */
   const realTokens = allTotals.input + allTotals.output + allTotals.cacheRead;
   const totalRequests = allTotals.messages;
-
-  /* pricing display */
-  const pricingGroups = useMemo(() => groupPricing(data.pricing), [data.pricing]);
 
   return (
     <div className="page usage-page">
