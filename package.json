@@ -14,6 +14,7 @@
   "type": "module",
   "scripts": {
     "dev": "concurrently -k -n server,web -c cyan,magenta \"npm:server\" \"npm:web\"",
+    "dev:fix": "node scripts/dev-fix.mjs",
     "dev:desktop": "concurrently -k -n server,web,app -c cyan,magenta,green \"npm:server\" \"npm:web\" \"npm:electron:wait\"",
     "electron:wait": "wait-on tcp:127.0.0.1:1420 tcp:127.0.0.1:8787 && electron .",
     "electron": "electron .",
