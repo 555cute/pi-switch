@@ -62,6 +62,46 @@ export const api = {
   getSettings: () => request<PiSettings>("/api/settings"),
   getUsage: () => request<UsageOverview>("/api/usage"),
   getSkills: () => request<SkillsOverview>("/api/skills"),
+  getPricing: () =>
+    request<{
+      freshness: {
+        loaded: boolean;
+        fetchedAt?: string;
+        count?: number;
+        ageMs?: number;
+        source?: string;
+      };
+      rows: Array<{
+        provider: string;
+        model: string;
+        inputPer1k: number | null;
+        outputPer1k: number | null;
+        cacheReadPer1k: number | null;
+        cacheWritePer1k: number | null;
+        source: "models.json" | "synced" | "unknown";
+        matchedAs?: string;
+      }>;
+      synced?: Array<{
+        provider: string;
+        model: string;
+        inputPer1k: number | null;
+        outputPer1k: number | null;
+        cacheReadPer1k: number | null;
+        cacheWritePer1k: number | null;
+        source: "synced";
+        matchedAs: string;
+      }>;
+      syncedCount?: number;
+    }>("/api/pricing"),
+  syncPricing: (force = false) =>
+    request<{ ok: boolean; count?: number; fetchedAt?: string; error?: string }>(
+      "/api/pricing/sync",
+      { method: "POST", body: JSON.stringify({ force }) },
+    ),
+  searchPricing: (q: string) =>
+    request<{ ok: boolean; models: any[] }>(
+      `/api/pricing/search?q=${encodeURIComponent(q)}`,
+    ),
   getPackages: () => request<PackagesOverview>("/api/packages"),
   getAgentHome: async () => {
     const r = await request<{ path: string }>("/api/agent-home");

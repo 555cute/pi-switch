@@ -3549,3 +3549,63 @@ html[data-theme="dark"] .usage-hero {
     align-items: stretch;
   }
 }
+
+
+/* Pricing section polish */
+.pricing-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 4px 4px 8px;
+  border-bottom: 1px dashed var(--divider);
+  margin-bottom: 8px;
+}
+
+.pricing-toolbar .input {
+  width: 240px;
+  max-width: 100%;
+}
+
+.pricing-meta {
+  font-size: 11.5px;
+  color: var(--muted);
+  padding: 2px 8px;
+  border-radius: var(--radius-pill);
+  background: var(--bg-subtle);
+  border: 1px solid var(--border);
+  font-weight: 550;
+  white-space: nowrap;
+}
+
+.pricing-meta.ok {
+  color: var(--green);
+  background: var(--green-soft);
+  border-color: transparent;
+}
+
+.pricing-meta.warn {
+  color: var(--orange);
+  background: var(--orange-soft);
+  border-color: transparent;
+}
+
+.pricing-sub-strong {
+  color: var(--text);
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+}
+
+.pricing-table-wrap table th,
+.pricing-table-wrap table td {
+  white-space: nowrap;
+}
+
+.pricing-table-wrap table td code {
+  font-size: 11.5px;
+  max-width: 220px;
+  display: inline-block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  vertical-align: middle;
+}

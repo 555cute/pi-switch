@@ -1,12 +1,12 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ensureUsage, useCache } from "../store";
 import { LineChart } from "../components/LineChart";
 import { Skeleton, Tag } from "../components/UI";
 import { toast } from "../components/Toast";
 import { formatCost, formatDate, formatTokens } from "../utils";
+import { api } from "../api";
 import type {
   HourlyUsage,
-  ModelPricing,
   SessionSummary,
   TokenTotals,
 } from "../types";
@@ -145,6 +145,47 @@ function hourlyToPoints(
     value: v.value,
     secondary: v.secondary,
   }));
+}
+
+/* ---------- pricing row type ---------- */
+
+interface PricingRow {
+  provider: string;
+  model: string;
+  inputPer1k: number | null;
+  outputPer1k: number | null;
+  cacheReadPer1k: number | null;
+  cacheWritePer1k: number | null;
+  source: "models.json" | "synced" | "unknown";
+  matchedAs?: string;
+}
+
+interface PricingResponse {
+  freshness: {
+    loaded: boolean;
+    fetchedAt?: string;
+    count?: number;
+    ageMs?: number;
+    source?: string;
+  };
+  rows: PricingRow[];
+}
+
+function priceAgeLabel(ms?: number): string {
+  if (ms == null) return "未同步";
+  const m = Math.round(ms / 60000);
+  if (m < 1) return "刚刚";
+  if (m < 60) return `${m} 分钟前`;
+  const h = Math.round(m / 60);
+  if (h < 24) return `${h} 小时前`;
+  return `${Math.round(h / 24)} 天前`;
+}
+
+function priceCell(v: number | null | undefined): string {
+  if (v == null || !Number.isFinite(v)) return "—";
+  if (v === 0) return "免费";
+  if (v < 0.0001) return v.toExponential(2);
+  return v.toFixed(4);
 }
 
 export function Usage() {
@@ -331,12 +372,6 @@ export function Usage() {
     if (!data) return [] as { label: string; value: number; secondary: number }[];
     return hourlyToPoints(data.byHour, trend);
   }, [data, trend]);
-
-  /* pricing groups (must be before any conditional return) */
-  const pricingGroups = useMemo(
-    () => groupPricing(data?.pricing ?? []),
-    [data],
-  );
 
   if (!data || !allTotals) {
     return (
@@ -780,34 +815,74 @@ export function Usage() {
       </section>
 
       {/* Pricing accordion */}
-      <PricingSection groups={pricingGroups} />
+      <PricingSection />
     </div>
   );
 }
 
-/* ---------- pricing accordion ---------- */
+/* ---------- pricing accordion (self-contained, fetches /api/pricing) ---------- */
 
-function groupPricing(
-  pricing: ModelPricing[],
-): { provider: string; rows: ModelPricing[] }[] {
-  const map = new Map<string, ModelPricing[]>();
-  for (const p of pricing) {
-    const list = map.get(p.provider) ?? [];
-    list.push(p);
-    map.set(p.provider, list);
-  }
-  return Array.from(map.entries())
-    .map(([provider, rows]) => ({ provider, rows }))
-    .sort((a, b) => a.provider.localeCompare(b.provider));
-}
-
-function PricingSection({
-  groups,
-}: {
-  groups: { provider: string; rows: ModelPricing[] }[];
-}) {
+function PricingSection() {
   const [open, setOpen] = useState(true);
-  const [openProvider, setOpenProvider] = useState<string | null>(null);
+  const [syncing, setSyncing] = useState(false);
+  const [data, setData] = useState<PricingResponse | null>(null);
+  const [filter, setFilter] = useState("");
+
+  const load = useCallback(async () => {
+    try {
+      const r = await api.getPricing();
+      setData(r);
+    } catch (e) {
+      console.error("getPricing failed", e);
+    }
+  }, []);
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  const onSync = async (force: boolean) => {
+    setSyncing(true);
+    try {
+      const r = await api.syncPricing(force);
+      if (r.ok) {
+        toast(`已同步 ${r.count} 个模型定价`, "ok");
+        await load();
+      } else {
+        toast(`同步失败：${r.error ?? "未知错误"}`, "err");
+      }
+    } catch (e: any) {
+      toast(`同步失败：${e?.message ?? e}`, "err");
+    } finally {
+      setSyncing(false);
+    }
+  };
+
+  const rows = data?.rows ?? [];
+  const freshness = data?.freshness;
+  const ql = filter.trim().toLowerCase();
+  const filtered = ql
+    ? rows.filter(
+        (r) =>
+          r.provider.toLowerCase().includes(ql) ||
+          r.model.toLowerCase().includes(ql),
+      )
+    : rows;
+
+  // group by provider
+  const byProvider = new Map<string, PricingRow[]>();
+  for (const r of filtered) {
+    const list = byProvider.get(r.provider) ?? [];
+    list.push(r);
+    byProvider.set(r.provider, list);
+  }
+  const groups = Array.from(byProvider.entries())
+    .map(([provider, list]) => ({ provider, list }))
+    .sort((a, b) => a.provider.localeCompare(b.provider));
+
+  // counts by source
+  const local = rows.filter((r) => r.source === "models.json").length;
+  const unknown = rows.filter((r) => r.source === "unknown").length;
 
   return (
     <section className="panel pricing-section">
@@ -819,96 +894,170 @@ function PricingSection({
         <span className="pricing-ico">$</span>
         <span className="pricing-titles">
           <span className="pricing-title">成本定价</span>
-          <span className="pricing-sub">管理各模型 Token 计费规则</span>
+          <span className="pricing-sub">
+            本地{" "}
+            <strong className="pricing-sub-strong">{local}</strong> ·
+            联网同步{" "}
+            <strong className="pricing-sub-strong">
+              {freshness?.count ?? 0}
+            </strong>{" "}
+            个模型 · 未匹配{" "}
+            <strong className="pricing-sub-strong">{unknown}</strong>
+          </span>
+        </span>
+        <span
+          className={`pricing-meta ${freshness?.loaded ? "ok" : "warn"}`}
+          onClick={(e) => e.stopPropagation()}
+        >
+          {freshness?.loaded ? priceAgeLabel(freshness.ageMs) : "未同步"}
+        </span>
+        <span
+          className="row-gap"
+          onClick={(e) => e.stopPropagation()}
+          style={{ marginRight: 6 }}
+        >
+          <button
+            type="button"
+            className="btn xs"
+            disabled={syncing}
+            onClick={() => onSync(false)}
+            title="从 OpenRouter 拉取最新定价"
+          >
+            {syncing ? "同步中…" : "同步"}
+          </button>
         </span>
         <span className={`pricing-chevron ${open ? "open" : ""}`}>›</span>
       </button>
+
       {open ? (
         <div className="pricing-body">
+          <div className="pricing-toolbar">
+            <input
+              className="input sm"
+              placeholder="按供应商 / 模型搜索…"
+              value={filter}
+              onChange={(e) => setFilter(e.target.value)}
+            />
+            <div className="row-gap">
+              <span className="muted small">
+                命中 <strong>{filtered.length}</strong> / {rows.length}
+              </span>
+              {!freshness?.loaded ? (
+                <button
+                  type="button"
+                  className="btn sm primary"
+                  disabled={syncing}
+                  onClick={() => onSync(true)}
+                >
+                  {syncing ? "同步中…" : "立即同步"}
+                </button>
+              ) : null}
+            </div>
+          </div>
+
           {groups.length === 0 ? (
-            <div className="empty-inline">未发现定价配置（models.json）</div>
+            <div className="empty-inline">
+              {freshness?.loaded
+                ? "没有匹配的模型"
+                : "未发现定价数据，请点击「同步」拉取"}
+            </div>
           ) : (
-            groups.map((g) => {
-              const isOpen = openProvider === g.provider;
-              return (
-                <div className="pricing-provider" key={g.provider}>
-                  <button
-                    type="button"
-                    className="pricing-provider-head"
-                    onClick={() => setOpenProvider(isOpen ? null : g.provider)}
-                  >
-                    <span className={`pricing-chevron ${isOpen ? "open" : ""}`}>
-                      ›
-                    </span>
-                    <span>{g.provider}</span>
-                    <span className="muted small">
-                      {g.rows.length} 个模型
-                    </span>
-                  </button>
-                  {isOpen ? (
-                    <div className="pricing-table-wrap">
-                      <table>
-                        <thead>
-                          <tr>
-                            <th>模型</th>
-                            <th className="num">输入 $/1k</th>
-                            <th className="num">输出 $/1k</th>
-                            <th className="num">缓存读 $/1k</th>
-                            <th className="num">缓存写 $/1k</th>
-                            <th>来源</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {g.rows.map((r) => (
-                            <tr key={`${r.provider}-${r.model}`}>
-                              <td>
-                                <code>{r.model}</code>
-                              </td>
-                              <td className="num">
-                                {r.inputPer1k != null
-                                  ? r.inputPer1k.toFixed(4)
-                                  : "—"}
-                              </td>
-                              <td className="num">
-                                {r.outputPer1k != null
-                                  ? r.outputPer1k.toFixed(4)
-                                  : "—"}
-                              </td>
-                              <td className="num">
-                                {r.cacheReadPer1k != null
-                                  ? r.cacheReadPer1k.toFixed(4)
-                                  : "—"}
-                              </td>
-                              <td className="num">
-                                {r.cacheWritePer1k != null
-                                  ? r.cacheWritePer1k.toFixed(4)
-                                  : "—"}
-                              </td>
-                              <td>
-                                <Tag
-                                  tone={
-                                    r.source === "models.json"
-                                      ? "ok"
-                                      : r.source === "computed"
-                                        ? "info"
-                                        : "default"
-                                  }
-                                >
-                                  {r.source}
-                                </Tag>
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  ) : null}
-                </div>
-              );
-            })
+            groups.map((g) => (
+              <PricingProviderGroup key={g.provider} group={g} />
+            ))
           )}
         </div>
       ) : null}
     </section>
   );
+}
+
+function PricingProviderGroup({
+  group,
+}: {
+  group: { provider: string; list: PricingRow[] };
+}) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="pricing-provider">
+      <button
+        type="button"
+        className="pricing-provider-head"
+        onClick={() => setOpen((o) => !o)}
+      >
+        <span className={`pricing-chevron ${open ? "open" : ""}`}>›</span>
+        <span>{group.provider}</span>
+        <span className="muted small">{group.list.length} 个模型</span>
+      </button>
+      {open ? (
+        <div className="pricing-table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>模型</th>
+                <th className="num">输入 $/1k</th>
+                <th className="num">输出 $/1k</th>
+                <th className="num">缓存读 $/1k</th>
+                <th className="num">缓存写 $/1k</th>
+                <th>来源</th>
+                <th>匹配</th>
+              </tr>
+            </thead>
+            <tbody>
+              {group.list.map((r) => (
+                <tr key={`${r.provider}-${r.model}`}>
+                  <td>
+                    <code>{r.model}</code>
+                  </td>
+                  <td className="num">{priceCell(r.inputPer1k)}</td>
+                  <td className="num">{priceCell(r.outputPer1k)}</td>
+                  <td className="num">{priceCell(r.cacheReadPer1k)}</td>
+                  <td className="num">{priceCell(r.cacheWritePer1k)}</td>
+                  <td>
+                    <Tag
+                      tone={
+                        r.source === "models.json"
+                          ? "ok"
+                          : r.source === "synced"
+                            ? "info"
+                            : "warn"
+                      }
+                    >
+                      {r.source === "models.json"
+                        ? "本地"
+                        : r.source === "synced"
+                          ? "联网"
+                          : "未匹配"}
+                    </Tag>
+                  </td>
+                  <td>
+                    <span className="muted small" title={r.matchedAs ?? ""}>
+                      {r.matchedAs ? shortMatch(r.matchedAs) : "—"}
+                    </span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function shortMatch(s: string): string {
+  // "exact" / "normalized" / "alias" / "model-exact" / "fuzzy:1" / "exact → openai/gpt-5"
+  const arrow = s.indexOf("→");
+  const head = arrow >= 0 ? s.slice(0, arrow).trim() : s;
+  const tail = arrow >= 0 ? s.slice(arrow + 1).trim() : "";
+  const map: Record<string, string> = {
+    exact: "精确",
+    "model-exact": "模型",
+    normalized: "归一",
+    "provider+normalized": "供应商+归一",
+    alias: "别名",
+    fuzzy: "模糊",
+  };
+  const label = map[head] ?? head;
+  return tail ? `${label} · ${tail}` : label;
 }

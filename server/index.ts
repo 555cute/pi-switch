@@ -13,6 +13,14 @@ import {
 } from "./models";
 import { loadDashboard, loadPackagesOverview, loadSkillsOverview } from "./inventory";
 import { loadUsageOverview } from "./usage";
+import {
+  loadSyncedPricing,
+  mergePricing,
+  pricingFreshness,
+  resolvePrice,
+  resolveMany,
+  syncPricing,
+} from "./pricing";
 import { piAgentHome, usageLogPath } from "./paths";
 import {
   DEFAULT_APP_SETTINGS,
@@ -122,6 +130,76 @@ const server = http.createServer(async (req, res) => {
     }
     if (req.method === "GET" && p === "/api/usage") {
       return send(res, 200, await loadUsageOverview());
+    }
+    if (req.method === "GET" && p === "/api/pricing") {
+      const overview = await loadUsageOverview();
+      const local = mergePricing(overview.pricing);
+      // If we have no local pricing rows, surface the synced index instead
+      // so the UI can show real-world prices to the user.
+      const idx = loadSyncedPricing();
+      let rows = local;
+      let syncedOnly: any[] = [];
+      if (idx) {
+        syncedOnly = idx.models.map((m) => ({
+          provider: m.provider,
+          model: m.model,
+          inputPer1k: m.inputPer1k,
+          outputPer1k: m.outputPer1k,
+          cacheReadPer1k: m.cacheReadPer1k,
+          cacheWritePer1k: m.cacheWritePer1k,
+          source: "synced" as const,
+          matchedAs: "exact",
+        }));
+        if (rows.length === 0) rows = syncedOnly;
+      }
+      return send(res, 200, {
+        freshness: pricingFreshness(),
+        rows,
+        synced: syncedOnly,
+        syncedCount: idx?.count ?? 0,
+      });
+    }
+    if (req.method === "POST" && p === "/api/pricing/sync") {
+      try {
+        const body = await readBody(req);
+        const idx = await syncPricing({ force: !!body?.force });
+        return send(res, 200, {
+          ok: true,
+          count: idx.count,
+          fetchedAt: idx.fetchedAt,
+        });
+      } catch (e: any) {
+        return send(res, 500, { ok: false, error: String(e?.message ?? e) });
+      }
+    }
+    if (req.method === "GET" && p === "/api/pricing/resolve") {
+      const url = new URL(req.url || "/", "http://x");
+      const provider = url.searchParams.get("provider") ?? "";
+      const model = url.searchParams.get("model") ?? "";
+      const r = resolvePrice(provider, model);
+      if (!r) return send(res, 200, { ok: false });
+      return send(res, 200, {
+        ok: true,
+        matchedAs: r.matchedAs,
+        model: r.model,
+      });
+    }
+    if (req.method === "GET" && p === "/api/pricing/search") {
+      const url = new URL(req.url || "/", "http://x");
+      const q = (url.searchParams.get("q") ?? "").toLowerCase();
+      const idx = loadSyncedPricing();
+      if (!idx) return send(res, 200, { ok: false, models: [] });
+      const list = q
+        ? idx.models
+            .filter(
+              (m) =>
+                m.id.toLowerCase().includes(q) ||
+                m.name.toLowerCase().includes(q) ||
+                m.model.toLowerCase().includes(q),
+            )
+            .slice(0, 50)
+        : idx.models.slice(0, 50);
+      return send(res, 200, { ok: true, models: list });
     }
     if (req.method === "GET" && p === "/api/skills") {
       return send(res, 200, await loadSkillsOverview());
