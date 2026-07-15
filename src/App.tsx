@@ -226,7 +226,9 @@ function App() {
     <div className={`app-root ${isDesktop ? "desktop" : "browser"}`}>
       <header className="topbar">
         <div className="topbar-brand draggable">
-          <div className="brand-mark">π</div>
+          <div className="brand-mark" aria-hidden>
+            <img src="/logo.png" alt="" className="brand-logo" draggable={false} />
+          </div>
           <div className="brand-text">
             <div className="brand-title">pi-switch</div>
             <div className="brand-sub">v0.1.0</div>
