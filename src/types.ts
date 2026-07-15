@@ -86,6 +86,21 @@ export interface DailyUsage {
   totals: TokenTotals;
 }
 
+export interface HourlyUsage {
+  /** ISO hour bucket, e.g. "2026-07-15 09" */
+  hour: string;
+  totals: TokenTotals;
+  messages: number;
+  requests: number;
+}
+
+export interface SessionTiming {
+  durationMs: number;
+  firstTokenMs: number;
+  lastActiveMs: number;
+  ttftMs?: number | null;
+}
+
 export interface ToolUsage {
   name: string;
   count: number;
@@ -103,23 +118,40 @@ export interface SessionSummary {
   path: string;
   cwd?: string | null;
   startedAt?: string | null;
+  endedAt?: string | null;
   provider?: string | null;
   model?: string | null;
   totals: TokenTotals;
   messageCount: number;
   toolCalls: number;
+  errors: number;
+  status: "ok" | "running" | "error";
+  timing?: SessionTiming | null;
 }
 
 export interface UsageOverview {
   totals: TokenTotals;
   byProviderModel: ProviderUsage[];
   byDay: DailyUsage[];
+  byHour: HourlyUsage[];
   tools: ToolUsage[];
   skills: SkillUsage[];
   sessions: SessionSummary[];
   sessionFiles: number;
   scannedLines: number;
   extensionEvents: number;
+  /** Per-model unit pricing discovered from providers (input/output $ per 1k). */
+  pricing: ModelPricing[];
+}
+
+export interface ModelPricing {
+  provider: string;
+  model: string;
+  inputPer1k?: number | null;
+  outputPer1k?: number | null;
+  cacheReadPer1k?: number | null;
+  cacheWritePer1k?: number | null;
+  source: "models.json" | "computed" | "unknown";
 }
 
 export interface SkillInfo {
