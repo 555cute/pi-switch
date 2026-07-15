@@ -3819,3 +3819,16 @@ html[data-theme="dark"] .usage-hero {
   position: relative;
   padding-right: 64px;
 }
+
+/* === Manage: compact sub-page header === */
+.manage-page > .page-header {
+  padding-bottom: 4px;
+}
+
+.manage-page > .page-header .page-kicker {
+  margin-top: 2px;
+}
+
+.manage-page .sub-tabs-top {
+  margin-bottom: 10px;
+}

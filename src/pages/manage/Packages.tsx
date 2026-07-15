@@ -181,9 +181,7 @@ export function Packages() {
       <div className="page">
         <header className="page-header">
           <div>
-            <h1>
-              扩展包 <span className="en">Extensions</span>
-            </h1>
+            <p>扩展包</p>
             <p className="muted page-kicker">加载中…</p>
           </div>
         </header>
@@ -206,9 +204,6 @@ export function Packages() {
     <div className="page">
       <header className="page-header">
         <div>
-          <h1>
-            扩展包 <span className="en">Extensions</span>
-          </h1>
           <p className="muted page-kicker">
             来自 <code>settings.json</code> packages[] · npm root{" "}
             <code>{basic?.npmRoot || ""}</code>

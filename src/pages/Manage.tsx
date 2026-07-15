@@ -5,14 +5,35 @@ import { Skills } from "./manage/Skills";
 
 type Section = "providers" | "packages" | "skills";
 
-const SECTIONS: { id: Section; label: string; en: string }[] = [
-  { id: "providers", label: "供应商", en: "Providers" },
-  { id: "packages", label: "扩展包", en: "Packages" },
-  { id: "skills", label: "技能", en: "Skills" },
+const SECTIONS: {
+  id: Section;
+  label: string;
+  en: string;
+  kicker: string;
+}[] = [
+  {
+    id: "providers",
+    label: "供应商",
+    en: "Providers",
+    kicker: "模型供应商 · 读写 models.json / auth.json · 切换默认模型",
+  },
+  {
+    id: "packages",
+    label: "扩展包",
+    en: "Packages",
+    kicker: "npm 包 · 独立启用 / 禁用 / 命令控制",
+  },
+  {
+    id: "skills",
+    label: "技能",
+    en: "Skills",
+    kicker: "技能列表 · 调用频率 · 来源筛选",
+  },
 ];
 
 export function Manage({ initial = "providers" }: { initial?: Section } = {}) {
   const [section, setSection] = useState<Section>(initial);
+  const current = SECTIONS.find((s) => s.id === section) ?? SECTIONS[0];
 
   return (
     <div className="page manage-page">
@@ -21,7 +42,7 @@ export function Manage({ initial = "providers" }: { initial?: Section } = {}) {
           <h1>
             管理 <span className="en">Manage</span>
           </h1>
-          <p className="muted page-kicker">供应商 · 扩展包 · 技能</p>
+          <p className="muted page-kicker">{current.kicker}</p>
         </div>
       </header>
       <div className="sub-tabs sub-tabs-top" role="tablist">

@@ -69,7 +69,7 @@ export function Providers() {
       <div className="page">
         <header className="page-header">
           <div>
-            <h1>供应商 <span className="en">Providers</span></h1>
+            <p>供应商</p>
             <p className="muted page-kicker">加载中…</p>
           </div>
         </header>
@@ -238,9 +238,6 @@ export function Providers() {
     <div className="page">
       <header className="page-header">
         <div>
-          <h1>
-            供应商 <span className="en">Providers</span>
-          </h1>
           <p className="muted page-kicker">
             管理 <code>models.json</code> + <code>auth.json</code> · 默认：
             <strong>
