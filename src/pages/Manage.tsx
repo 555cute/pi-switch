@@ -4,9 +4,9 @@ import { Extensions } from "./manage/Extensions";
 
 type Section = "providers" | "extensions";
 
-const SECTIONS: { id: Section; label: string; icon: string }[] = [
-  { id: "providers", label: "供应商", icon: "◇" },
-  { id: "extensions", label: "扩展", icon: "▣" },
+const SECTIONS: { id: Section; label: string }[] = [
+  { id: "providers", label: "供应商" },
+  { id: "extensions", label: "扩展" },
 ];
 
 export function Manage({ initial = "providers" }: { initial?: Section } = {}) {
@@ -22,8 +22,7 @@ export function Manage({ initial = "providers" }: { initial?: Section } = {}) {
             className={`sub-tab ${section === s.id ? "active" : ""}`}
             onClick={() => setSection(s.id)}
           >
-            <span className="sub-tab-icon">{s.icon}</span>
-            <span>{s.label}</span>
+            {s.label}
           </button>
         ))}
       </div>

@@ -9,11 +9,11 @@ import { ensureAppSettings, ensureProviders, ensureSkills, useCache } from "./st
 import type { NavRequest, TabId } from "./types";
 import "./App.css";
 
-const TABS: { id: TabId; label: string; icon: string }[] = [
-  { id: "dashboard", label: "概览", icon: "⌂" },
-  { id: "manage", label: "管理", icon: "☰" },
-  { id: "usage", label: "用量", icon: "▣" },
-  { id: "settings", label: "设置", icon: "⚙" },
+const TABS: { id: TabId; label: string; icon?: string }[] = [
+  { id: "dashboard", label: "概览" },
+  { id: "manage", label: "管理" },
+  { id: "usage", label: "用量" },
+  { id: "settings", label: "设置" },
 ];
 
 const TAB_IDS = new Set<TabId>(["dashboard", "manage", "usage", "settings"]);
@@ -244,9 +244,7 @@ function App() {
                 key={t.id}
                 className={`topnav-item ${tab === t.id ? "active" : ""}`}
                 onClick={() => navigate(t.id)}
-                data-icon={t.icon}
               >
-                <span className="topnav-icon">{t.icon}</span>
                 <span className="topnav-label">{t.label}</span>
                 {badge ? <span className="tab-badge">{badge}</span> : null}
               </button>
