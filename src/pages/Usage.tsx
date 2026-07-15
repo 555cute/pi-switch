@@ -249,7 +249,12 @@ export function Usage() {
   }, []);
 
   useEffect(() => {
-    api.getPricing().then(setPricing).catch(() => {});
+    api
+      .getPricing()
+      .then(setPricing)
+      .catch((e) => {
+        console.warn("getPricing failed (non-fatal)", e);
+      });
   }, []);
 
   /* filtered sessions */
@@ -335,14 +340,20 @@ export function Usage() {
   useEffect(() => setPageInput(String(page)), [page]);
 
   /* attach computed cost to each row */
-  const pagedWithCost = useMemo(
-    () =>
-      pagedSessions.map((s) => {
+  const pagedWithCost = useMemo(() => {
+    return pagedSessions.map((s) => {
+      try {
         const c = computeSessionCost(s, pricingMap);
         return { session: s, ...c };
-      }),
-    [pagedSessions, pricingMap],
-  );
+      } catch (e) {
+        return {
+          session: s,
+          cost: s.totals?.cost ?? 0,
+          source: "stored" as const,
+        };
+      }
+    });
+  }, [pagedSessions, pricingMap]);
 
   /* export */
   const stamp = new Date().toISOString().slice(0, 10);
@@ -910,7 +921,11 @@ function PricingSection() {
       const r = await api.getPricing();
       setData(r);
     } catch (e) {
-      console.error("getPricing failed", e);
+      console.warn("PricingSection: getPricing failed (non-fatal)", e);
+      setData({
+        freshness: { loaded: false },
+        rows: [],
+      });
     }
   }, []);
 
