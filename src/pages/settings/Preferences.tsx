@@ -3,7 +3,6 @@ import { api } from "../../api";
 import {
   ensureAppSettings,
   ensureSettings,
-  saveAppSettings,
   useCache,
 } from "../../store";
 import type { AppSettings } from "../../types";
@@ -36,23 +35,6 @@ export type PrefSection =
   | "developer"
   | "about";
 
-const SECTIONS: { id: PrefSection; label: string; en: string }[] = [
-  { id: "theme", label: "主题", en: "Theme" },
-  { id: "typography", label: "字体与排版", en: "Typography" },
-  { id: "motion", label: "动效", en: "Motion" },
-  { id: "startup", label: "启动与关闭", en: "Startup" },
-  { id: "layout", label: "尺寸与布局", en: "Layout" },
-  { id: "agent", label: "Agent 路径", en: "Agent Path" },
-  { id: "network", label: "网络连接", en: "Network" },
-  { id: "cache", label: "缓存与刷新", en: "Cache" },
-  { id: "general", label: "通用", en: "General" },
-  { id: "privacy", label: "隐私与确认", en: "Privacy" },
-  { id: "notifications", label: "通知", en: "Notifications" },
-  { id: "shortcuts", label: "快捷键", en: "Shortcuts" },
-  { id: "prompt", label: "系统提示", en: "Prompt" },
-  { id: "developer", label: "开发者", en: "Developer" },
-  { id: "about", label: "关于", en: "About" },
-];
 
 const FONT_PREVIEWS = [
   { v: "inter", label: "Inter", stack: '"Inter","Inter Tight",sans-serif' },
@@ -68,7 +50,6 @@ export function Preferences({
 } = {}) {
   const cache = useCache();
   const [draft, setDraft] = useState<AppSettings | null>(null);
-  const [saving, setSaving] = useState(false);
   const [platform, setPlatform] = useState<string>("");
 
   useEffect(() => {
@@ -109,100 +90,8 @@ export function Preferences({
   const set = <K extends keyof AppSettings>(k: K, v: AppSettings[K]) =>
     setDraft((d) => (d ? { ...d, [k]: v } : d));
 
-  const save = async () => {
-    if (!draft) return;
-    setSaving(true);
-    try {
-      const { setToastPrefs } = await import("../../components/Toast");
-      setToastPrefs({
-        toastNotifications: draft.toastNotifications !== false,
-        errorToasts: draft.errorToasts !== false,
-      });
-      await saveAppSettings(draft);
-      toast("已保存设置", "ok");
-    } catch (e) {
-      toast("保存失败: " + e, "err");
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const reset = () => {
-    if (cache.appSettingsDefaults) {
-      setDraft({ ...cache.appSettingsDefaults });
-      toast("已恢复默认（未保存）", "info");
-    }
-  };
-
-  const exportSettings = () => {
-    const blob = new Blob([JSON.stringify(draft, null, 2)], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `pi-switch-settings-${new Date().toISOString().slice(0, 10)}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
-    toast("已导出", "ok");
-  };
-
-  const importSettings = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => {
-      try {
-        const obj = JSON.parse(reader.result as string);
-        setDraft((d) => (d ? { ...d, ...obj } : d));
-        toast("已导入（未保存）", "ok");
-      } catch (err) {
-        toast("导入失败: " + err, "err");
-      }
-    };
-    reader.readAsText(file);
-  };
-
-  const current = SECTIONS.find((s) => s.id === section) || SECTIONS[0];
-
   return (
     <div className="settings-pane">
-      <header className="page-header">
-        <div>
-          <h1>
-            {current.label} <span className="en">{current.en}</span>
-          </h1>
-        </div>
-        <div className="header-actions">
-          <input
-            type="file"
-            accept="application/json"
-            style={{ display: "none" }}
-            id="settings-import"
-            onChange={importSettings}
-          />
-          <button
-            type="button"
-            className="btn ghost sm"
-            onClick={() => document.getElementById("settings-import")?.click()}
-          >
-            导入
-          </button>
-          <button type="button" className="btn ghost sm" onClick={exportSettings}>
-            导出
-          </button>
-          <button type="button" className="btn ghost sm" onClick={reset}>
-            恢复默认
-          </button>
-          <button
-            type="button"
-            className="btn primary sm"
-            onClick={() => void save()}
-            disabled={saving}
-          >
-            {saving ? "保存中…" : "保存"}
-          </button>
-        </div>
-      </header>
-
       <section className="settings-content">
         {section === "theme" ? <ThemeSection draft={draft} set={set} /> : null}
         {section === "typography" ? <TypographySection draft={draft} set={set} /> : null}
