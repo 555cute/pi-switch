@@ -35,8 +35,32 @@ type Cache = {
   appSettingsDefaults?: AppSettings;
   processes?: PiProcessInfo[];
   recentEvents?: RuntimeEvent[];
+  pricing?: PricingResponse;
   lastUpdated: Partial<Record<keyof Cache, number>>;
 };
+
+export interface PricingRow {
+  provider: string;
+  model: string;
+  inputPer1k: number | null;
+  outputPer1k: number | null;
+  cacheReadPer1k: number | null;
+  cacheWritePer1k: number | null;
+  source: "models.json" | "synced" | "unknown";
+  matchedAs?: string;
+}
+
+export interface PricingResponse {
+  freshness: {
+    loaded: boolean;
+    fetchedAt?: string;
+    count?: number;
+    ageMs?: number;
+    source?: string;
+  };
+  rows: PricingRow[];
+  syncedCount?: number;
+}
 
 const state: { cache: Cache } = { cache: { lastUpdated: {} } };
 const listeners = new Set<() => void>();
@@ -154,6 +178,40 @@ export function ensureProcesses(force = false) {
   if (force) state.cache.lastUpdated.processes = 0;
   if (!state.cache.processes || force) {
     void refresh("processes", () => api.getPiProcesses());
+  }
+}
+
+/**
+ * Pricing is preloaded on app start (see preloadPricing() in App.tsx).
+ * If the cache is empty we still trigger a fetch, but never block the UI.
+ */
+export function ensurePricing(force = false) {
+  if (force) state.cache.lastUpdated.pricing = 0;
+  if (!state.cache.pricing || force) {
+    void refresh("pricing", () => api.getPricing() as Promise<PricingResponse>);
+  }
+}
+
+export async function syncPricingNow(force = true): Promise<{
+  ok: boolean;
+  count?: number;
+  error?: string;
+}> {
+  try {
+    const r = await api.syncPricing(force);
+    if (r.ok) {
+      // pull the fresh merged list back into cache
+      const fresh = (await api.getPricing()) as PricingResponse;
+      state.cache = {
+        ...state.cache,
+        pricing: fresh,
+        lastUpdated: { ...state.cache.lastUpdated, pricing: Date.now() },
+      };
+      emit();
+    }
+    return r;
+  } catch (e: any) {
+    return { ok: false, error: String(e?.message ?? e) };
   }
 }
 

@@ -5,7 +5,15 @@ import { Overview } from "./pages/Overview";
 import { Manage } from "./pages/Manage";
 import { Settings, type SettingsLeaf } from "./pages/Settings";
 import { Usage } from "./pages/Usage";
-import { ensureAppSettings, ensureProviders, ensureSkills, useCache } from "./store";
+import {
+  ensureAppSettings,
+  ensurePricing,
+  ensureProviders,
+  ensureSkills,
+  syncPricingNow,
+  useCache,
+} from "./store";
+import { api } from "./api";
 import type { NavRequest, TabId } from "./types";
 import "./App.css";
 
@@ -69,6 +77,20 @@ function App() {
     setIsDesktop(desktop);
     document.documentElement.classList.toggle("is-desktop", desktop);
     ensureAppSettings();
+    // Preload pricing (non-blocking). If the server has no cached index
+    // yet, kick off an initial sync in the background so the first time
+    // the user opens the Usage tab prices are already there.
+    ensurePricing();
+    api
+      .getPricing()
+      .then((p) => {
+        const ageMs = p?.freshness?.ageMs;
+        const loaded = !!p?.freshness?.loaded;
+        if (!loaded || (ageMs != null && ageMs > 6 * 60 * 60 * 1000)) {
+          void syncPricingNow(false);
+        }
+      })
+      .catch(() => {});
   }, []);
 
   // Apply theme / font / radius / toast prefs when settings load

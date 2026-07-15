@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ensureUsage, useCache } from "../store";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { ensureUsage, syncPricingNow, useCache } from "../store";
 import { LineChart } from "../components/LineChart";
 import { Skeleton, Tag } from "../components/UI";
 import { toast } from "../components/Toast";
@@ -189,43 +189,101 @@ function priceCell(v: number | null | undefined): string {
 }
 
 /**
- * Compute a session's cost from synced pricing, falling back to the
- * stored cost if no price can be resolved. The fallback chain:
- *   exact (provider+model) -> normalized model only -> stored cost
+ * Lightweight client-side normalizer matching server/pricing.ts.
+ * Lets us resolve model names across provider aliases on the fly.
  */
-function computeSessionCost(
-  s: SessionSummary,
-  pricingMap: Map<string, PricingRow> | null,
-): { cost: number; source: "synced" | "stored" | "unknown" } {
-  const stored = s.totals?.cost ?? 0;
-  if (!pricingMap || pricingMap.size === 0) {
-    return { cost: stored, source: stored > 0 ? "stored" : "unknown" };
+function normalizeId(raw: string): string {
+  if (!raw) return "";
+  let s = String(raw).toLowerCase().trim();
+  s = s.replace(/^[a-z0-9-]+[/\\]/, "");
+  s = s.replace(/^@cf\//, "");
+  s = s.replace(/[<>()[\]{}]/g, "");
+  s = s.replace(/[\s._]+/g, "-");
+  s = s.replace(/-+/g, "-");
+  s = s.replace(/-(preview|exp|beta|alpha|latest|free)$/g, "");
+  s = s.replace(/-\d{4}-\d{2}-\d{2}$/g, "");
+  s = s.replace(/-\d{8}$/g, "");
+  return s;
+}
+
+function versionVariants(s: string): string[] {
+  const out = new Set<string>([s]);
+  out.add(s.replace(/(\d+)-(\d+)/g, "$1.$2"));
+  out.add(s.replace(/(\d+)\.(\d+)/g, "$1-$2"));
+  return Array.from(out);
+}
+
+/**
+ * Find a pricing row for (provider, model) using the same multi-strategy
+ * approach as the server: exact -> normalized -> version variants ->
+ * model-only across all providers.
+ */
+function findPricingRow(
+  provider: string,
+  model: string,
+  rows: PricingRow[],
+): { row: PricingRow; matchedAs: string } | null {
+  const p = (provider ?? "").toLowerCase();
+  const m = (model ?? "").toLowerCase();
+  if (!m) return null;
+
+  // 1) exact "provider/model"
+  for (const r of rows) {
+    if (r.provider.toLowerCase() === p && r.model.toLowerCase() === m) {
+      return { row: r, matchedAs: "exact" };
+    }
   }
-  const key = `${(s.provider ?? "").toLowerCase()}/${(s.model ?? "").toLowerCase()}`;
-  let row = pricingMap.get(key);
-  if (!row) {
-    // try by model only
-    for (const r of pricingMap.values()) {
-      if (r.model.toLowerCase() === (s.model ?? "").toLowerCase()) {
-        row = r;
-        break;
+  // 2) normalized
+  const nm = normalizeId(model);
+  for (const r of rows) {
+    if (normalizeId(r.provider) === normalizeId(provider) && normalizeId(r.model) === nm) {
+      return { row: r, matchedAs: "normalized" };
+    }
+  }
+  // 3) version variants
+  for (const v of versionVariants(nm)) {
+    for (const r of rows) {
+      if (normalizeId(r.model) === v) {
+        return { row: r, matchedAs: "version-variant" };
       }
     }
   }
-  if (!row) {
+  // 4) model-only anywhere
+  for (const r of rows) {
+    if (r.model.toLowerCase() === m) {
+      return { row: r, matchedAs: "model-only" };
+    }
+  }
+  return null;
+}
+
+/**
+ * Compute a session's cost from synced pricing, falling back to the
+ * stored cost if no price can be resolved.
+ */
+function computeSessionCost(
+  s: SessionSummary,
+  pricing: PricingResponse | null | undefined,
+): { cost: number; source: "synced" | "stored" | "unknown"; matchedAs?: string; row?: PricingRow } {
+  const stored = s.totals?.cost ?? 0;
+  if (!pricing || !pricing.rows?.length) {
+    return { cost: stored, source: stored > 0 ? "stored" : "unknown" };
+  }
+  const found = findPricingRow(s.provider ?? "", s.model ?? "", pricing.rows);
+  if (!found) {
     return { cost: stored, source: stored > 0 ? "stored" : "unknown" };
   }
   const t = s.totals;
-  const inP = row.inputPer1k ?? 0;
-  const outP = row.outputPer1k ?? 0;
-  const crP = row.cacheReadPer1k ?? 0;
-  const cwP = row.cacheWritePer1k ?? 0;
+  const inP = found.row.inputPer1k ?? 0;
+  const outP = found.row.outputPer1k ?? 0;
+  const crP = found.row.cacheReadPer1k ?? 0;
+  const cwP = found.row.cacheWritePer1k ?? 0;
   const cost =
     (inP * (t.input ?? 0)) / 1000 +
     (outP * (t.output ?? 0)) / 1000 +
     (crP * (t.cacheRead ?? 0)) / 1000 +
     (cwP * (t.cacheWrite ?? 0)) / 1000;
-  if (cost > 0) return { cost, source: "synced" };
+  if (cost > 0) return { cost, source: "synced", matchedAs: found.matchedAs, row: found.row };
   return { cost: stored, source: stored > 0 ? "stored" : "unknown" };
 }
 
@@ -242,7 +300,9 @@ export function Usage() {
   const [pageInput, setPageInput] = useState("1");
   const pageSize = 12;
   const tableRef = useRef<HTMLDivElement | null>(null);
-  const [pricing, setPricing] = useState<PricingResponse | null>(null);
+  // Pricing comes from the shared cache (preloaded on app start).
+  // Local state is only kept as a safety net in case the cache is empty.
+  const [_localPricing, setPricing] = useState<PricingResponse | null>(null);
 
   useEffect(() => {
     ensureUsage();
@@ -252,10 +312,11 @@ export function Usage() {
     api
       .getPricing()
       .then(setPricing)
-      .catch((e) => {
-        console.warn("getPricing failed (non-fatal)", e);
-      });
+      .catch(() => {});
   }, []);
+
+  // Use shared cache when available, fall back to local safety-net fetch
+  const effectivePricing = cache.pricing ?? _localPricing;
 
   /* filtered sessions */
   const filteredSessions = useMemo(() => {
@@ -320,16 +381,6 @@ export function Usage() {
     );
   }, [data]);
 
-  /* pricing lookup for cost computation */
-  const pricingMap = useMemo(() => {
-    if (!pricing) return null;
-    const m = new Map<string, PricingRow>();
-    for (const r of pricing.rows) {
-      m.set(`${r.provider.toLowerCase()}/${r.model.toLowerCase()}`, r);
-    }
-    return m;
-  }, [pricing]);
-
   /* pagination */
   const total = filteredSessions.length;
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
@@ -343,8 +394,7 @@ export function Usage() {
   const pagedWithCost = useMemo(() => {
     return pagedSessions.map((s) => {
       try {
-        const c = computeSessionCost(s, pricingMap);
-        return { session: s, ...c };
+        return { session: s, ...computeSessionCost(s, effectivePricing) };
       } catch (e) {
         return {
           session: s,
@@ -353,7 +403,7 @@ export function Usage() {
         };
       }
     });
-  }, [pagedSessions, pricingMap]);
+  }, [pagedSessions, effectivePricing]);
 
   /* export */
   const stamp = new Date().toISOString().slice(0, 10);
@@ -911,40 +961,22 @@ export function Usage() {
 /* ---------- pricing accordion (self-contained, fetches /api/pricing) ---------- */
 
 function PricingSection() {
+  const cache = useCache();
   const [open, setOpen] = useState(true);
   const [syncing, setSyncing] = useState(false);
-  const [data, setData] = useState<PricingResponse | null>(null);
   const [filter, setFilter] = useState("");
-
-  const load = useCallback(async () => {
-    try {
-      const r = await api.getPricing();
-      setData(r);
-    } catch (e) {
-      console.warn("PricingSection: getPricing failed (non-fatal)", e);
-      setData({
-        freshness: { loaded: false },
-        rows: [],
-      });
-    }
-  }, []);
-
-  useEffect(() => {
-    load();
-  }, [load]);
+  // Use the shared cache so we don't double-fetch on every mount.
+  const data = cache.pricing;
 
   const onSync = async (force: boolean) => {
     setSyncing(true);
     try {
-      const r = await api.syncPricing(force);
+      const r = await syncPricingNow(force);
       if (r.ok) {
-        toast(`已同步 ${r.count} 个模型定价`, "ok");
-        await load();
+        toast(`已同步 ${r.count ?? 0} 个模型定价`, "ok");
       } else {
         toast(`同步失败：${r.error ?? "未知错误"}`, "err");
       }
-    } catch (e: any) {
-      toast(`同步失败：${e?.message ?? e}`, "err");
     } finally {
       setSyncing(false);
     }
