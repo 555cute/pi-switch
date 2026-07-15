@@ -1,7 +1,7 @@
 # pi-switch
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](./LICENSE)
-[![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey)](#)
+[![Platform](https://img.shields.io/badge/platform-Windows-lightgrey)](#)
 
 类似 [CC Switch](https://github.com/farion1231/cc-switch) 的 **pi 专用桌面控制台**：管理模型供应商、Token 用量、技能与包，并增强对 pi 的配置级与运行时控制。
 
@@ -12,7 +12,7 @@
 | **概览** | 今日 / 全量用量、默认模型、Top tools & skills |
 | **供应商** | 读写 `~/.pi/agent/models.json` / `auth.json`，切换默认模型，**连通性探测** |
 | **扩展** | Packages / Skills 管理，**一键 install / remove / update**，package-level 覆盖 |
-| **用量** | 解析会话 JSONL 汇总 token / cost / cache / 工具调用，**CSV 导出** |
+| **用量** | 解析会话 JSONL 汇总 token / cost / cache / 工具调用，**OpenRouter 实时同步模型定价** + **CSV 导出** |
 | **设置** | 外观、窗口、缓存、快捷键、备份、进程控制、系统提示等 |
 
 默认**只读解析** pi 数据；写入操作（供应商、备份、覆盖项等）可在 UI 中显式触发。
@@ -47,8 +47,6 @@ npm run dev
 npm install
 npm run pack        # 解包目录 release/win-unpacked（推荐本地调试）
 npm run dist:win    # Windows NSIS 安装包 + portable
-npm run dist:mac    # macOS dmg
-npm run dist:linux  # AppImage + deb
 ```
 
 - 产物目录：`release/`
@@ -57,19 +55,19 @@ npm run dist:linux  # AppImage + deb
 - Windows 若杀软锁定 `release/` 目录导致 EPERM，可先关闭占用进程或改输出目录
 - NSIS/portable 需要能访问 GitHub 下载 nsis 工具；网络受限时用 `npm run pack` 即可
 
-### Tauri（可选，需 MSVC / 系统工具链）
-
-`src-tauri/` 保留完整 Rust 实现：
+### 修复 Vite HMR 缓存（页面突然白屏 / 样式没了）
 
 ```bash
-npm run tauri:dev
+npm run dev:fix
 ```
+
+清理 `node_modules/.vite` 并重启 dev 服务，然后 **Ctrl+Shift+R** 硬刷一次。
 
 ## 技术栈
 
 - **Backend**: Node.js + TypeScript（`server/`）
 - **Frontend**: React 19 + Vite + TypeScript
-- **Desktop**: Electron（主路径）/ Tauri 2（可选）
+- **Desktop**: Electron（frameless 窗口 + Windows mica）
 
 ## 数据路径
 
@@ -84,6 +82,7 @@ npm run tauri:dev
 ~/.pi-switch/settings.json              # 本应用设置
 ~/.pi-switch/package-overrides.json     # 包/技能覆盖
 ~/.pi/agent/pi-switch/usage-events.jsonl # 可选 extension
+~/.pi/agent/pi-switch/pricing.json      # 联网同步的模型定价缓存
 ```
 
 Windows 下 pi-switch 配置默认在 `%APPDATA%\pi-switch\`。
@@ -108,7 +107,7 @@ pi -e ./extensions/pi-switch-usage
 - [x] Packages 页一键 `pi install` / `pi remove` / `pi update`
 - [x] 托盘快速切换默认模型
 - [x] Electron Builder 正式打包分发
-- [ ] 统一 Tauri invoke 与 HTTP API 双后端
+- [x] OpenRouter 模型定价自动同步 + 名称归一化
 
 ## 贡献
 

@@ -13,7 +13,6 @@ dist
 dist-server
 dist-ssr
 *.local
-src-tauri/target
 *.tsbuildinfo
 .electron-out
 release
