@@ -136,7 +136,6 @@ export function Control({
           <h1>
             控制台 <span className="en">Control</span>
           </h1>
-          <p className="muted page-kicker">进程管理 · 实时事件流</p>
         </div>
         <div className="header-actions">
           <button

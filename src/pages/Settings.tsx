@@ -282,7 +282,6 @@ function DiagnosticsPanel() {
           <h1>
             诊断 <span className="en">Diagnostics</span>
           </h1>
-          <p className="muted page-kicker">检查本地服务、路径与运行状态</p>
         </div>
         <div className="header-actions">
           <button type="button" className="btn sm" onClick={() => void runCheck()}>
@@ -352,7 +351,6 @@ function DiagnosticsPanel() {
             <div className="setting-row">
               <div className="setting-row-text">
                 <div className="setting-row-label">刷新应用</div>
-                <div className="setting-row-desc">重新加载前端资源与缓存</div>
               </div>
               <div className="setting-row-control">
                 <button
@@ -382,7 +380,6 @@ function UpdatesPanel() {
           <h1>
             更新 <span className="en">Updates</span>
           </h1>
-          <p className="muted page-kicker">当前版本与更新策略</p>
         </div>
       </header>
       <div className="settings-stack">
@@ -392,7 +389,6 @@ function UpdatesPanel() {
             <div className="setting-row">
               <div className="setting-row-text">
                 <div className="setting-row-label">已安装版本</div>
-                <div className="setting-row-desc">pi-switch desktop</div>
               </div>
               <div className="setting-row-control">
                 <Tag tone="default">v0.1.0</Tag>
@@ -401,7 +397,6 @@ function UpdatesPanel() {
             <div className="setting-row">
               <div className="setting-row-text">
                 <div className="setting-row-label">自动检查更新</div>
-                <div className="setting-row-desc">后续版本会接入 GitHub Releases 检查</div>
               </div>
               <div className="setting-row-control">
                 <Tag tone="warn">未接入</Tag>
@@ -429,7 +424,6 @@ function LicensesPanel() {
           <h1>
             开源许可 <span className="en">Licenses</span>
           </h1>
-          <p className="muted page-kicker">本应用依赖的主要开源组件</p>
         </div>
       </header>
       <div className="settings-stack">

@@ -61,7 +61,6 @@ export function Skills() {
         <header className="page-header">
           <div>
             <p>技能</p>
-            <p className="muted page-kicker">扫描中…</p>
           </div>
         </header>
         <div className="grid-2">
@@ -103,9 +102,6 @@ export function Skills() {
     <div className="page">
       <header className="page-header">
         <div>
-          <p className="muted page-kicker">
-            已发现 {data.skills.length} 个技能（{counts.global} 全局 · {counts.package} 扩展包 · {counts.history} 历史）
-          </p>
         </div>
         <div className="header-actions">
           <button

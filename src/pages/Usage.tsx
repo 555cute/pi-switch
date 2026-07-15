@@ -535,7 +535,6 @@ export function Usage() {
             <h1>
               用量 <span className="en">Usage</span>
             </h1>
-            <p className="muted page-kicker">扫描中…</p>
           </div>
         </header>
         <div className="stat-grid">
@@ -570,9 +569,6 @@ export function Usage() {
           <h1>
             用量 <span className="en">Usage</span>
           </h1>
-          <p className="muted page-kicker">
-            {data.sessionFiles} 个会话 · {data.scannedLines.toLocaleString()} 行记录
-          </p>
         </div>
         <div className="header-actions">
           <select

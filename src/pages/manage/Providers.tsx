@@ -70,7 +70,6 @@ export function Providers() {
         <header className="page-header">
           <div>
             <p>供应商</p>
-            <p className="muted page-kicker">加载中…</p>
           </div>
         </header>
         <div className="providers-layout">

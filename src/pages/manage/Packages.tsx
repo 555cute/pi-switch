@@ -182,7 +182,6 @@ export function Packages() {
         <header className="page-header">
           <div>
             <p>扩展包</p>
-            <p className="muted page-kicker">加载中…</p>
           </div>
         </header>
         <div className="packages-layout">

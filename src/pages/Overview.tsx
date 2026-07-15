@@ -88,7 +88,6 @@ export function Overview({
         <header className="page-header">
           <div>
             <h1>概览 <span className="en">Dashboard</span></h1>
-            <p className="muted page-kicker">今日用量、默认模型与常用入口</p>
           </div>
         </header>
         <div className="stat-grid">
@@ -156,7 +155,6 @@ export function Overview({
           <h1>
             概览 <span className="en">Dashboard</span>
           </h1>
-          <p className="muted page-kicker">今日用量、默认模型与常用入口</p>
         </div>
         <div className="header-actions">
           <div className="status-chip">
@@ -395,7 +393,6 @@ export function Overview({
             <div className="quick-icon blue">☁</div>
             <div className="quick-text">
               <div className="quick-title">管理供应商</div>
-              <div className="quick-desc">添加 / 编辑 / 切换模型供应商</div>
             </div>
             <div className="quick-arrow">›</div>
           </button>
@@ -407,7 +404,6 @@ export function Overview({
             <div className="quick-icon orange">⧉</div>
             <div className="quick-text">
               <div className="quick-title">扩展包与技能</div>
-              <div className="quick-desc">启用/禁用/独立控制</div>
             </div>
             <div className="quick-arrow">›</div>
           </button>
@@ -419,7 +415,6 @@ export function Overview({
             <div className="quick-icon slate">▮</div>
             <div className="quick-text">
               <div className="quick-title">查看用量详情</div>
-              <div className="quick-desc">深入分析 Token 使用情况</div>
             </div>
             <div className="quick-arrow">›</div>
           </button>
@@ -431,7 +426,6 @@ export function Overview({
             <div className="quick-icon violet">▷</div>
             <div className="quick-text">
               <div className="quick-title">进程与事件</div>
-              <div className="quick-desc">进程列表 / 实时 SSE 事件</div>
             </div>
             <div className="quick-arrow">›</div>
           </button>
@@ -443,7 +437,6 @@ export function Overview({
             <div className="quick-icon teal">◉</div>
             <div className="quick-text">
               <div className="quick-title">备份与恢复</div>
-              <div className="quick-desc">models / auth / settings 快照</div>
             </div>
             <div className="quick-arrow">›</div>
           </button>
@@ -455,7 +448,6 @@ export function Overview({
             <div className="quick-icon blue">◐</div>
             <div className="quick-text">
               <div className="quick-title">外观设置</div>
-              <div className="quick-desc">主题 / 字体 / 动效</div>
             </div>
             <div className="quick-arrow">›</div>
           </button>

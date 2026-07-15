@@ -90,9 +90,6 @@ export function Backups() {
           <h1>
             备份 <span className="en">Backups</span>
           </h1>
-          <p className="muted page-kicker">
-            一键备份 models.json / auth.json / settings.json / trust.json
-          </p>
         </div>
         <div className="header-actions">
           <input
