@@ -488,12 +488,6 @@ export function Usage() {
     toast(`已导出 ${name}`, "ok");
   };
 
-  const exportAll = () => {
-    (["days", "sessions", "models", "tools", "skills"] as ExportKind[]).forEach(
-      (k) => exportCsv(k),
-    );
-  };
-
   /* derived: trend points */
   const trendPoints = useMemo(() => {
     if (!data) return [] as { label: string; value: number; secondary: number }[];
@@ -561,6 +555,14 @@ export function Usage() {
   const realTokens = allTotals.input + allTotals.output + allTotals.cacheRead;
   const totalRequests = allTotals.messages;
 
+  /* today (last 24h of byDay buckets) */
+  const today = (() => {
+    if (!data) return null;
+    const last = data.byDay[data.byDay.length - 1];
+    return last;
+  })();
+  const todayTotals = today?.totals ?? allTotals;
+
   return (
     <div className="page usage-page">
       <header className="page-header">
@@ -586,10 +588,7 @@ export function Usage() {
             <option value="skills">导出技能</option>
           </select>
           <button type="button" className="btn sm" onClick={() => exportCsv()}>
-            导出 CSV
-          </button>
-          <button type="button" className="btn sm ghost" onClick={exportAll}>
-            全部导出
+            导出
           </button>
           <button
             type="button"
@@ -601,189 +600,85 @@ export function Usage() {
         </div>
       </header>
 
-      {/* Top toolbar: source icon filters + dropdowns + refresh time */}
-      <div className="usage-toolbar panel">
-        <div className="usage-toolbar-left">
-          <div className="source-pills">
-            {(["all", "pi", "extension", "cli"] as const).map((s) => (
-              <button
-                key={s}
-                type="button"
-                className={`source-pill ${sourceFilter === s ? "active" : ""}`}
-                onClick={() => setSourceFilter(s)}
-                title={
-                  s === "all"
-                    ? "全部来源"
-                    : s === "pi"
-                      ? "pi 编码代理"
-                      : s === "extension"
-                        ? "扩展"
-                        : "CLI"
-                }
-              >
-                <span className="source-pill-glyph">
-                  {s === "all" ? "⊞" : SOURCE_ICONS[s] ?? "?"}
-                </span>
-              </button>
-            ))}
-          </div>
-
-          <div className="usage-select-group">
-            <select
-              className="input sm"
-              value={modelFilter}
-              onChange={(e) => setModelFilter(e.target.value)}
-            >
-              <option value="all">全部模型</option>
-              {allModels.map((m) => (
-                <option key={m} value={m}>
-                  {m}
-                </option>
-              ))}
-            </select>
-          </div>
+      {/* === KPI strip: 5 primary metrics in a single row === */}
+      <div className="usage-kpis">
+        <div className="usage-kpi">
+          <div className="usage-kpi-label">真实消耗</div>
+          <div className="usage-kpi-value">{realTokens.toLocaleString()}</div>
+          <div className="usage-kpi-hint">≈ {formatTokens(allTotals.totalTokens)} tokens</div>
         </div>
-
-        <div className="usage-toolbar-right">
-          <div className="seg">
-            {(
-              [
-                { v: "7", label: "近 7 天" },
-                { v: "30", label: "近 30 天" },
-                { v: "all", label: "全部" },
-              ] as { v: Range; label: string }[]
-            ).map((r) => (
-              <button
-                key={r.v}
-                type="button"
-                className={`seg-btn ${range === r.v ? "active" : ""}`}
-                onClick={() => setRange(r.v)}
-              >
-                {r.label}
-              </button>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      {/* Hero card: real tokens consumed */}
-      <section className="panel usage-hero">
-        <div className="usage-hero-main">
-          <div className="usage-hero-icon">
-            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
-            </svg>
-          </div>
-          <div className="usage-hero-text">
-            <div className="usage-hero-label">真实消耗 Tokens</div>
-            <div className="usage-hero-row">
-              <span className="usage-hero-value">
-                {realTokens.toLocaleString()}
-              </span>
-              <span className="usage-hero-aside">
-                <span className="usage-hero-approx">≈</span>
-                <span className="usage-hero-sub">
-                  {formatTokens(allTotals.totalTokens)}
-                </span>
-              </span>
-            </div>
-            <div className="usage-hero-hint">
-              含缓存读取 · 累计 {formatTokens(allTotals.totalTokens)} tokens
-            </div>
-          </div>
-        </div>
-
-        <div className="usage-hero-side">
-          <div className="usage-hero-stat">
-            <div className="usage-hero-stat-label">总请求数</div>
-            <div className="usage-hero-stat-value">
-              <span className="usage-hero-stat-ico">📈</span>
-              {totalRequests.toLocaleString()}
-            </div>
-          </div>
-          <div className="usage-hero-stat">
-            <div className="usage-hero-stat-label">总成本</div>
-            <div
-              className="usage-hero-stat-value"
-              title={
-                costSource === "synced"
-                  ? `按联网定价计算（${costMatched}/${costSessions} 个会话）`
-                  : costSource === "stored"
-                    ? "来自会话记录中的 cost 字段"
-                    : "未找到定价"
-              }
-            >
-              <span className="usage-hero-stat-ico green">$</span>
-              {formatCost(totalComputedCost)}
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* 2x2 sub-cards */}
-      <div className="usage-grid-2x2">
-        <div className="panel usage-tile">
-          <div className="usage-tile-head">
-            <span className="usage-tile-ico blue">↓</span>
-            <span>新增输入</span>
-          </div>
-          <div className="usage-tile-value">{rangedTotals.newInput.toLocaleString()}</div>
-          <div className="usage-tile-hint">
-            累计 {formatTokens(allTotals.input + allTotals.cacheWrite)}
-          </div>
-        </div>
-        <div className="panel usage-tile">
-          <div className="usage-tile-head">
-            <span className="usage-tile-ico violet">↑</span>
-            <span>Output</span>
-          </div>
-          <div className="usage-tile-value">{rangedTotals.output.toLocaleString()}</div>
-          <div className="usage-tile-hint">
-            累计 {formatTokens(allTotals.output)}
-          </div>
-        </div>
-        <div className="panel usage-tile">
-          <div className="usage-tile-head">
-            <span className="usage-tile-ico teal">💬</span>
-            <span>创建</span>
-          </div>
-          <div className="usage-tile-value">{rangedTotals.created.toLocaleString()}</div>
-          <div className="usage-tile-hint">
-            消息 · 累计 {allTotals.messages}
-          </div>
-        </div>
-        <div className="panel usage-tile">
-          <div className="usage-tile-head">
-            <span className="usage-tile-ico orange">⚡</span>
-            <span>命中</span>
-          </div>
-          <div className="usage-tile-value">{rangedTotals.hits.toLocaleString()}</div>
-          <div className="usage-tile-hint">
-            cache_read · 累计 {formatTokens(allTotals.cacheRead)}
-          </div>
-        </div>
-      </div>
-
-      {/* Cache hit rate */}
-      <section className="panel usage-cache">
-        <div className="usage-cache-head">
-          <span>缓存命中率</span>
-          <span className="usage-cache-value green">{cacheRate.toFixed(1)}%</span>
-        </div>
-        <div className="usage-cache-track">
+        <div className="usage-kpi">
+          <div className="usage-kpi-label">总成本</div>
           <div
-            className="usage-cache-fill"
-            style={{ width: `${Math.min(100, cacheRate)}%` }}
-          />
+            className="usage-kpi-value"
+            title={
+              costSource === "synced"
+                ? `按联网定价计算（${costMatched}/${costSessions} 个会话）`
+                : costSource === "stored"
+                  ? "来自会话记录中的 cost 字段"
+                  : "未找到定价"
+            }
+          >
+            {formatCost(totalComputedCost)}
+          </div>
+          <div className="usage-kpi-hint">
+            {costSource === "synced" ? "联网定价" : costSource === "stored" ? "会话记录" : "未匹配"}
+          </div>
         </div>
-        <div className="usage-cache-legend">
-          <span>read {formatTokens(allTotals.cacheRead)}</span>
-          <span>write {formatTokens(allTotals.cacheWrite)}</span>
-          <span>total {formatTokens(allTotals.totalTokens)}</span>
+        <div className="usage-kpi">
+          <div className="usage-kpi-label">总请求数</div>
+          <div className="usage-kpi-value">{totalRequests.toLocaleString()}</div>
+          <div className="usage-kpi-hint">消息</div>
         </div>
-      </section>
+        <div className="usage-kpi">
+          <div className="usage-kpi-label">缓存命中</div>
+          <div className="usage-kpi-value">{cacheRate.toFixed(1)}%</div>
+          <div className="usage-kpi-bar">
+            <div className="usage-kpi-bar-fill" style={{ width: `${Math.min(100, cacheRate)}%` }} />
+          </div>
+        </div>
+        <div className="usage-kpi">
+          <div className="usage-kpi-label">今日</div>
+          <div className="usage-kpi-value">{formatTokens(todayTotals.totalTokens)}</div>
+          <div className="usage-kpi-hint">
+            {today ? today.date : "—"} · {formatCost(todayTotals.cost)}
+          </div>
+        </div>
+      </div>
 
-      {/* Trend chart */}
+      {/* === Token breakdown strip === */}
+      <div className="usage-breakdown">
+        <div className="usage-breakdown-item">
+          <span className="usage-breakdown-ico" style={{ background: "linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)" }}>↓</span>
+          <div className="usage-breakdown-text">
+            <span className="usage-breakdown-label">新增输入</span>
+            <span className="usage-breakdown-value">{rangedTotals.newInput.toLocaleString()}</span>
+          </div>
+        </div>
+        <div className="usage-breakdown-item">
+          <span className="usage-breakdown-ico" style={{ background: "linear-gradient(135deg, #a18cd1 0%, #fbc2eb 100%)", color: "#5e2d8a" }}>↑</span>
+          <div className="usage-breakdown-text">
+            <span className="usage-breakdown-label">Output</span>
+            <span className="usage-breakdown-value">{rangedTotals.output.toLocaleString()}</span>
+          </div>
+        </div>
+        <div className="usage-breakdown-item">
+          <span className="usage-breakdown-ico" style={{ background: "linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)", color: "#0d6a4f" }}>⚡</span>
+          <div className="usage-breakdown-text">
+            <span className="usage-breakdown-label">缓存读取</span>
+            <span className="usage-breakdown-value">{rangedTotals.hits.toLocaleString()}</span>
+          </div>
+        </div>
+        <div className="usage-breakdown-item">
+          <span className="usage-breakdown-ico" style={{ background: "linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%)", color: "#b85200" }}>💬</span>
+          <div className="usage-breakdown-text">
+            <span className="usage-breakdown-label">消息</span>
+            <span className="usage-breakdown-value">{rangedTotals.created.toLocaleString()}</span>
+          </div>
+        </div>
+      </div>
+
+      {/* === Trend chart === */}
       <section className="panel usage-trend">
         <div className="panel-header">
           <h2>
@@ -813,7 +708,7 @@ export function Usage() {
         <LineChart
           points={trendPoints}
           secondary
-          height={300}
+          height={240}
           emptyText={
             trend === "24h"
               ? "当天暂无活动"
@@ -822,22 +717,73 @@ export function Usage() {
         />
       </section>
 
-      {/* Sessions table (ccswitch layout) */}
+      {/* === Sessions table === */}
       <section className="panel">
         <div className="panel-header">
           <h2>
             会话记录 <span className="en">Sessions</span>
+            <span className="muted small" style={{ marginLeft: 6, fontWeight: 400 }}>· {filteredSessions.length}</span>
           </h2>
           <div className="row-gap">
+            <div className="source-pills" style={{ height: 26 }}>
+              {([
+                { v: "all", label: "全部" },
+                { v: "pi", label: "pi" },
+                { v: "extension", label: "扩展" },
+                { v: "cli", label: "CLI" },
+              ] as const).map((opt) => (
+                <button
+                  key={opt.v}
+                  type="button"
+                  className={`source-pill ${sourceFilter === opt.v ? "active" : ""}`}
+                  onClick={() => setSourceFilter(opt.v as any)}
+                  style={{ height: 24 }}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+            <select
+              className="input sm"
+              value={modelFilter}
+              onChange={(e) => setModelFilter(e.target.value)}
+              style={{ width: 140 }}
+            >
+              <option value="all">全部模型</option>
+              {allModels.map((m) => (
+                <option key={m} value={m}>
+                  {m}
+                </option>
+              ))}
+            </select>
+            <div className="seg" style={{ height: 24 }}>
+              {(
+                [
+                  { v: "7", label: "7天" },
+                  { v: "30", label: "30天" },
+                  { v: "all", label: "全部" },
+                ] as { v: Range; label: string }[]
+              ).map((r) => (
+                <button
+                  key={r.v}
+                  type="button"
+                  className={`seg-btn ${range === r.v ? "active" : ""}`}
+                  onClick={() => setRange(r.v)}
+                  style={{ height: 22, fontSize: 11.5 }}
+                >
+                  {r.label}
+                </button>
+              ))}
+            </div>
             <input
               className="input sm"
-              placeholder="搜索 cwd / 模型 / id…"
+              placeholder="搜索…"
               value={q}
               onChange={(e) => {
                 setQ(e.target.value);
                 setPage(1);
               }}
-              style={{ width: 200 }}
+              style={{ width: 120 }}
             />
             <button
               type="button"
@@ -854,7 +800,7 @@ export function Usage() {
               <tr>
                 <th>时间</th>
                 <th>供应商</th>
-                <th>计费模型</th>
+                <th>模型</th>
                 <th className="num">输入</th>
                 <th className="num">输出</th>
                 <th className="num">总成本</th>
@@ -864,7 +810,7 @@ export function Usage() {
               </tr>
             </thead>
             <tbody>
-              {pagedSessions.length === 0 ? (
+              {pagedWithCost.length === 0 ? (
                 <tr>
                   <td colSpan={9}>
                     <div className="empty-inline">暂无数据</div>
@@ -918,9 +864,7 @@ export function Usage() {
                         </span>
                       </td>
                       <td>
-                        <span
-                          className={`status-pill status-${s.status}`}
-                        >
+                        <span className={`status-pill status-${s.status}`}>
                           {s.status === "ok"
                             ? "完成"
                             : s.status === "error"
@@ -941,7 +885,7 @@ export function Usage() {
           </table>
         </div>
         <div className="panel-footer">
-          <span>共 {total} 条记录</span>
+          <span>共 {total} 条记录 · 第 {page}/{totalPages} 页</span>
           <div className="row-gap">
             <button
               type="button"
@@ -961,10 +905,10 @@ export function Usage() {
             >
               ›
             </button>
-            <span className="muted small">页码</span>
+            <span className="muted small">跳到</span>
             <input
               className="input xs"
-              style={{ width: 56, height: 26, padding: "0 6px" }}
+              style={{ width: 48, height: 24, padding: "0 6px", textAlign: "center" }}
               value={pageInput}
               onChange={(e) => setPageInput(e.target.value)}
               onKeyDown={(e) => {
@@ -978,23 +922,10 @@ export function Usage() {
                 }
               }}
             />
-            <button
-              type="button"
-              className="btn xs"
-              onClick={() => {
-                const n = Number(pageInput);
-                if (Number.isFinite(n) && n >= 1 && n <= totalPages) {
-                  setPage(n);
-                }
-              }}
-            >
-              跳转
-            </button>
           </div>
         </div>
       </section>
 
-      {/* Pricing accordion */}
       <PricingSection />
     </div>
   );
