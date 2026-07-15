@@ -1,25 +1,27 @@
 /*
- * pi-switch 路 refined white UI
- * Quiet macOS System Settings / Finder aesthetic.
- * Pure white surfaces, hairline borders, restrained blue accent.
+ * pi-switch · pure white UI
+ * Apple System Settings / Linear style.
+ * Pure white surfaces, hairline borders (1px @ 6-8% black),
+ * zero shadow on flat panels, restrained blue accent.
  */
 
 :root {
   color-scheme: light;
 
   --bg: #ffffff;
-  --bg-subtle: #f5f5f7;
+  --bg-subtle: #fafafa;
   --bg-panel: #ffffff;
-  --bg-panel-2: #f5f5f7;
-  --bg-hover: rgba(0, 0, 0, 0.035);
-  --bg-active: rgba(0, 0, 0, 0.055);
+  --bg-panel-2: #fafafa;
+  --bg-hover: rgba(0, 0, 0, 0.04);
+  --bg-active: rgba(0, 0, 0, 0.06);
   --bg-input: #ffffff;
 
-  --border: rgba(0, 0, 0, 0.08);
-  --border-strong: rgba(0, 0, 0, 0.12);
-  --divider: rgba(0, 0, 0, 0.06);
+  --border: rgba(0, 0, 0, 0.07);
+  --border-strong: rgba(0, 0, 0, 0.1);
+  --divider: rgba(0, 0, 0, 0.05);
 
   --text: #1d1d1f;
+  --text-2: #424245;
   --muted: #6e6e73;
   --muted-2: #8e8e93;
 
@@ -29,27 +31,27 @@
   --accent-2: #5e5ce6;
 
   --green: #34c759;
-  --green-soft: rgba(52, 199, 89, 0.12);
+  --green-soft: rgba(52, 199, 89, 0.1);
   --orange: #ff9f0a;
-  --orange-soft: rgba(255, 159, 10, 0.12);
+  --orange-soft: rgba(255, 159, 10, 0.1);
   --red: #ff3b30;
   --red-soft: rgba(255, 59, 48, 0.1);
   --violet: #af52de;
   --teal: #32ade6;
 
   --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.04);
-  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.05), 0 1px 2px rgba(0, 0, 0, 0.03);
-  --shadow: 0 4px 16px rgba(0, 0, 0, 0.06), 0 1px 3px rgba(0, 0, 0, 0.04);
-  --shadow-lg: 0 16px 48px rgba(0, 0, 0, 0.12), 0 4px 12px rgba(0, 0, 0, 0.06);
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.05);
+  --shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
+  --shadow-lg: 0 16px 48px rgba(0, 0, 0, 0.12);
 
-  --radius: 12px;
+  --radius: 10px;
   --radius-sm: 8px;
   --radius-xs: 6px;
   --radius-pill: 999px;
 
   --topbar-h: 52px;
-  --content-pad-x: 24px;
-  --content-pad-y: 20px;
+  --content-pad-x: 28px;
+  --content-pad-y: 24px;
   --sidebar-w: 248px;
 
   --font: "Inter", -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI",
@@ -65,9 +67,9 @@
 html[data-theme="dark"] {
   color-scheme: dark;
   --bg: #1c1c1e;
-  --bg-subtle: #2c2c2e;
-  --bg-panel: #2c2c2e;
-  --bg-panel-2: #3a3a3c;
+  --bg-subtle: #1f1f21;
+  --bg-panel: #232325;
+  --bg-panel-2: #2a2a2c;
   --bg-hover: rgba(255, 255, 255, 0.06);
   --bg-active: rgba(255, 255, 255, 0.1);
   --bg-input: #1c1c1e;
@@ -1016,13 +1018,12 @@ textarea.input,
   font-weight: 550;
 }
 
-/* ---------- Panels ---------- */
+/* ---------- Panels (flat, hairline border, no shadow) ---------- */
 
 .panel {
   background: var(--bg);
   border: 1px solid var(--border);
-  border-radius: 14px;
-  box-shadow: var(--shadow-xs);
+  border-radius: var(--radius);
   overflow: hidden;
   display: flex;
   flex-direction: column;
@@ -1034,14 +1035,10 @@ textarea.input,
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  padding: 12px 14px;
+  padding: 13px 16px;
   border-bottom: 1px solid var(--divider);
-  background: linear-gradient(180deg, #fbfbfc 0%, #ffffff 100%);
+  background: var(--bg);
   flex-shrink: 0;
-}
-
-html[data-theme="dark"] .panel-header {
-  background: linear-gradient(180deg, #2a2a2c 0%, #2c2c2e 100%);
 }
 
 .panel h2,
@@ -1054,6 +1051,7 @@ html[data-theme="dark"] .panel-header {
   display: flex;
   align-items: center;
   gap: 8px;
+  color: var(--text);
 }
 
 .panel h2 .en,
@@ -1061,6 +1059,7 @@ html[data-theme="dark"] .panel-header {
   font-size: 11px;
   font-weight: 500;
   color: var(--muted-2);
+  letter-spacing: 0;
 }
 
 .panel-footer {
@@ -1068,16 +1067,16 @@ html[data-theme="dark"] .panel-header {
   align-items: center;
   justify-content: space-between;
   gap: 10px;
-  padding: 10px 14px;
+  padding: 10px 16px;
   border-top: 1px solid var(--divider);
-  background: #fafafa;
+  background: var(--bg);
   color: var(--muted);
   font-size: 12px;
   flex-shrink: 0;
 }
 
 html[data-theme="dark"] .panel-footer {
-  background: #242426;
+  background: var(--bg-panel);
 }
 
 .panel-accent {
@@ -1251,9 +1250,8 @@ html[data-theme="dark"] .panel-footer {
 }
 
 .quick-card:hover {
-  background: #fafafa;
+  background: var(--bg-subtle);
   border-color: rgba(0, 113, 227, 0.22);
-  box-shadow: var(--shadow-sm);
   transform: translateY(-1px);
 }
 
@@ -1380,8 +1378,9 @@ th {
   font-size: 11px;
   font-weight: 600;
   color: var(--muted);
-  letter-spacing: 0.02em;
-  background: #fafafa;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  background: var(--bg);
   border-bottom: 1px solid var(--divider);
   position: sticky;
   top: 0;
@@ -1389,7 +1388,7 @@ th {
 }
 
 html[data-theme="dark"] th {
-  background: #242426;
+  background: var(--bg-panel);
 }
 
 td {
@@ -1536,7 +1535,6 @@ tr:hover td {
 .provider-item.active {
   background: var(--bg);
   border-color: var(--border);
-  box-shadow: var(--shadow-xs);
 }
 
 .provider-item-top {
@@ -1955,7 +1953,6 @@ tr:hover td {
   border: 1px solid var(--border);
   border-radius: 14px;
   background: var(--bg);
-  box-shadow: var(--shadow-xs);
   overflow: hidden;
 }
 
@@ -1973,11 +1970,11 @@ tr:hover td {
 .setting-card-footer {
   padding: 10px 14px 14px;
   border-top: 1px solid var(--divider);
-  background: #fafafa;
+  background: var(--bg);
 }
 
 html[data-theme="dark"] .setting-card-footer {
-  background: #242426;
+  background: var(--bg-panel);
 }
 
 .setting-row {
@@ -2416,11 +2413,11 @@ html[data-theme="dark"] .setting-card-footer {
   gap: 8px;
   padding: 12px 16px;
   border-top: 1px solid var(--divider);
-  background: #fafafa;
+  background: var(--bg);
 }
 
 html[data-theme="dark"] .modal-footer {
-  background: #242426;
+  background: var(--bg-panel);
 }
 
 .confirm-message {
@@ -2919,13 +2916,13 @@ html[data-animation="fast"] * {
   gap: 24px;
   padding: 20px 22px !important;
   align-items: center;
-  background: linear-gradient(135deg, #ffffff 0%, #fbfbff 100%) !important;
+  background: var(--bg) !important;
   border-radius: 16px !important;
   border: 1px solid var(--border) !important;
 }
 
 html[data-theme="dark"] .usage-hero {
-  background: linear-gradient(135deg, #2c2c2e 0%, #2a2a2c 100%) !important;
+  background: var(--bg-panel) !important;
 }
 
 .usage-hero-main {
@@ -3241,7 +3238,7 @@ html[data-theme="dark"] .usage-hero {
   font-weight: 600;
   color: var(--muted-2);
   padding: 10px 12px;
-  background: #fafafa;
+  background: var(--bg);
   border-bottom: 1px solid var(--divider);
   position: sticky;
   top: 0;
@@ -3514,7 +3511,7 @@ html[data-theme="dark"] .usage-hero {
 .pricing-table-wrap th {
   font-weight: 600;
   color: var(--muted-2);
-  background: #fafafa;
+  background: var(--bg);
 }
 
 .pricing-table-wrap td.num,
