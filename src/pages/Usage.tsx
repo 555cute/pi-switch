@@ -188,6 +188,47 @@ function priceCell(v: number | null | undefined): string {
   return v.toFixed(4);
 }
 
+/**
+ * Compute a session's cost from synced pricing, falling back to the
+ * stored cost if no price can be resolved. The fallback chain:
+ *   exact (provider+model) -> normalized model only -> stored cost
+ */
+function computeSessionCost(
+  s: SessionSummary,
+  pricingMap: Map<string, PricingRow> | null,
+): { cost: number; source: "synced" | "stored" | "unknown" } {
+  const stored = s.totals?.cost ?? 0;
+  if (!pricingMap || pricingMap.size === 0) {
+    return { cost: stored, source: stored > 0 ? "stored" : "unknown" };
+  }
+  const key = `${(s.provider ?? "").toLowerCase()}/${(s.model ?? "").toLowerCase()}`;
+  let row = pricingMap.get(key);
+  if (!row) {
+    // try by model only
+    for (const r of pricingMap.values()) {
+      if (r.model.toLowerCase() === (s.model ?? "").toLowerCase()) {
+        row = r;
+        break;
+      }
+    }
+  }
+  if (!row) {
+    return { cost: stored, source: stored > 0 ? "stored" : "unknown" };
+  }
+  const t = s.totals;
+  const inP = row.inputPer1k ?? 0;
+  const outP = row.outputPer1k ?? 0;
+  const crP = row.cacheReadPer1k ?? 0;
+  const cwP = row.cacheWritePer1k ?? 0;
+  const cost =
+    (inP * (t.input ?? 0)) / 1000 +
+    (outP * (t.output ?? 0)) / 1000 +
+    (crP * (t.cacheRead ?? 0)) / 1000 +
+    (cwP * (t.cacheWrite ?? 0)) / 1000;
+  if (cost > 0) return { cost, source: "synced" };
+  return { cost: stored, source: stored > 0 ? "stored" : "unknown" };
+}
+
 export function Usage() {
   const cache = useCache();
   const data = cache.usage;
@@ -201,9 +242,14 @@ export function Usage() {
   const [pageInput, setPageInput] = useState("1");
   const pageSize = 12;
   const tableRef = useRef<HTMLDivElement | null>(null);
+  const [pricing, setPricing] = useState<PricingResponse | null>(null);
 
   useEffect(() => {
     ensureUsage();
+  }, []);
+
+  useEffect(() => {
+    api.getPricing().then(setPricing).catch(() => {});
   }, []);
 
   /* filtered sessions */
@@ -269,6 +315,16 @@ export function Usage() {
     );
   }, [data]);
 
+  /* pricing lookup for cost computation */
+  const pricingMap = useMemo(() => {
+    if (!pricing) return null;
+    const m = new Map<string, PricingRow>();
+    for (const r of pricing.rows) {
+      m.set(`${r.provider.toLowerCase()}/${r.model.toLowerCase()}`, r);
+    }
+    return m;
+  }, [pricing]);
+
   /* pagination */
   const total = filteredSessions.length;
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
@@ -277,6 +333,16 @@ export function Usage() {
     if (page > totalPages) setPage(totalPages);
   }, [totalPages, page]);
   useEffect(() => setPageInput(String(page)), [page]);
+
+  /* attach computed cost to each row */
+  const pagedWithCost = useMemo(
+    () =>
+      pagedSessions.map((s) => {
+        const c = computeSessionCost(s, pricingMap);
+        return { session: s, ...c };
+      }),
+    [pagedSessions, pricingMap],
+  );
 
   /* export */
   const stamp = new Date().toISOString().slice(0, 10);
@@ -702,7 +768,7 @@ export function Usage() {
                   </td>
                 </tr>
               ) : (
-                pagedSessions.map((s) => {
+                pagedWithCost.map(({ session: s, cost, source }) => {
                   const src = s.path?.includes("extensions/")
                     ? "extension"
                     : s.path?.includes("cli/")
@@ -729,7 +795,18 @@ export function Usage() {
                       <td className="num">
                         {formatTokens(s.totals.output)}
                       </td>
-                      <td className="num">{formatCost(s.totals.cost)}</td>
+                      <td
+                        className="num"
+                        title={
+                          source === "synced"
+                            ? "按联网定价计算"
+                            : source === "stored"
+                              ? "来自会话记录"
+                              : "未找到定价"
+                        }
+                      >
+                        {formatCost(cost)}
+                      </td>
                       <td>
                         <span className="muted">
                           {s.timing
@@ -886,10 +963,17 @@ function PricingSection() {
 
   return (
     <section className="panel pricing-section">
-      <button
-        type="button"
+      <div
         className="pricing-head"
+        role="button"
+        tabIndex={0}
         onClick={() => setOpen((o) => !o)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            setOpen((o) => !o);
+          }
+        }}
       >
         <span className="pricing-ico">$</span>
         <span className="pricing-titles">
@@ -907,27 +991,23 @@ function PricingSection() {
         </span>
         <span
           className={`pricing-meta ${freshness?.loaded ? "ok" : "warn"}`}
-          onClick={(e) => e.stopPropagation()}
         >
           {freshness?.loaded ? priceAgeLabel(freshness.ageMs) : "未同步"}
         </span>
-        <span
-          className="row-gap"
-          onClick={(e) => e.stopPropagation()}
-          style={{ marginRight: 6 }}
+        <button
+          type="button"
+          className="btn xs"
+          disabled={syncing}
+          onClick={(e) => {
+            e.stopPropagation();
+            onSync(false);
+          }}
+          title="从 OpenRouter 拉取最新定价"
         >
-          <button
-            type="button"
-            className="btn xs"
-            disabled={syncing}
-            onClick={() => onSync(false)}
-            title="从 OpenRouter 拉取最新定价"
-          >
-            {syncing ? "同步中…" : "同步"}
-          </button>
-        </span>
+          {syncing ? "同步中…" : "同步"}
+        </button>
         <span className={`pricing-chevron ${open ? "open" : ""}`}>›</span>
-      </button>
+      </div>
 
       {open ? (
         <div className="pricing-body">
@@ -962,8 +1042,12 @@ function PricingSection() {
                 : "未发现定价数据，请点击「同步」拉取"}
             </div>
           ) : (
-            groups.map((g) => (
-              <PricingProviderGroup key={g.provider} group={g} />
+            groups.map((g, i) => (
+              <PricingProviderGroup
+                key={g.provider}
+                group={g}
+                defaultOpen={i < 3}
+              />
             ))
           )}
         </div>
@@ -974,21 +1058,30 @@ function PricingSection() {
 
 function PricingProviderGroup({
   group,
+  defaultOpen = false,
 }: {
   group: { provider: string; list: PricingRow[] };
+  defaultOpen?: boolean;
 }) {
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(defaultOpen);
   return (
     <div className="pricing-provider">
-      <button
-        type="button"
+      <div
         className="pricing-provider-head"
+        role="button"
+        tabIndex={0}
         onClick={() => setOpen((o) => !o)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            setOpen((o) => !o);
+          }
+        }}
       >
         <span className={`pricing-chevron ${open ? "open" : ""}`}>›</span>
         <span>{group.provider}</span>
         <span className="muted small">{group.list.length} 个模型</span>
-      </button>
+      </div>
       {open ? (
         <div className="pricing-table-wrap">
           <table>
