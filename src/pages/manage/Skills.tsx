@@ -122,7 +122,11 @@ export function Skills() {
             </h2>
           </div>
           <BarChart
-            items={data.skillUsage.map((s) => ({ label: s.name, value: s.count }))}
+            items={data.skills
+              .slice()
+              .sort((a, b) => b.usageCount - a.usageCount)
+              .slice(0, 10)
+              .map((s) => ({ label: s.name, value: s.usageCount }))}
             emptyText="尚未在会话中检测到技能调用"
           />
         </section>
