@@ -313,7 +313,12 @@ export function Overview({
               );
             })}
             {!data.topSkills.length ? (
-              <div className="empty-inline">暂无技能调用记录</div>
+              <div className="empty-inline">
+                尚未在会话中调用技能
+                <div className="muted small" style={{ marginTop: 4 }}>
+                  已发现 {data.skillCount} 个技能，去 管理 → 技能 浏览
+                </div>
+              </div>
             ) : null}
           </div>
           <div className="panel-footer">
