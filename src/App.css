@@ -3083,3 +3083,232 @@ html[data-theme="dark"] .usage-hero {
 .manage-page .sub-tabs-top {
   margin-bottom: 10px;
 }
+
+
+.theme-hero,
+.font-hero {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  padding: 12px 12px 14px;
+}
+
+.font-hero {
+  grid-template-columns: repeat(2, 1fr);
+}
+
+.theme-hero-tile,
+.font-hero-tile {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--bg);
+  padding: 10px;
+  cursor: pointer;
+  text-align: left;
+  transition: border-color 0.14s, box-shadow 0.14s;
+}
+
+.theme-hero-tile:hover,
+.font-hero-tile:hover {
+  border-color: var(--border-strong);
+}
+
+.theme-hero-tile.active,
+.font-hero-tile.active {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+.theme-hero-swatch {
+  height: 64px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  position: relative;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+}
+
+.theme-hero-dot {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  color: #fff;
+  font-size: 11px;
+  display: grid;
+  place-items: center;
+}
+
+.theme-hero-text-preview {
+  font-size: 22px;
+  font-weight: 650;
+}
+
+.theme-hero-meta,
+.font-hero-meta {
+  margin-top: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.theme-hero-label,
+.font-hero-name {
+  font-size: 12.5px;
+  font-weight: 600;
+}
+
+.theme-hero-sub {
+  font-size: 11px;
+  color: var(--muted-2);
+}
+
+.font-hero-sample {
+  font-size: 15px;
+  padding: 10px 4px 4px;
+  letter-spacing: -0.02em;
+}
+
+.font-hero-check {
+  color: var(--accent);
+  font-weight: 700;
+}
+
+.appearance-preview {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  padding: 12px 14px 14px;
+}
+
+
+/* === Settings: ensure sidebar scroll works and right pane fills === */
+
+.settings-nav-scroll {
+  flex: 1 1 auto !important;
+  min-height: 0 !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+}
+
+.settings-nav-group + .settings-nav-group {
+  margin-top: 6px;
+}
+
+.settings-nav-group-head {
+  padding: 10px 8px 4px;
+}
+
+.settings-pane-body {
+  min-height: calc(100% - 60px);
+}
+
+.settings-main {
+  display: flex;
+  flex-direction: column;
+}
+
+.settings-pane-head {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  flex-shrink: 0;
+  background: var(--bg);
+}
+
+.settings-pane-body {
+  flex: 1 1 auto;
+}
+
+/* === Settings: harden the layout chain === */
+
+.content-scroll--fill {
+  height: 100%;
+}
+
+.content-scroll--fill > .settings-shell {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.settings-nav-scroll {
+  scrollbar-gutter: stable;
+  padding: 0 2px 6px;
+  margin: 0;
+}
+
+.settings-nav-group {
+  padding: 0 4px;
+}
+
+.settings-nav-group + .settings-nav-group {
+  margin-top: 2px;
+}
+
+.settings-nav-group-head {
+  padding: 10px 6px 4px;
+  font-size: 10px;
+  letter-spacing: 0.06em;
+}
+
+/* Auto theme tile: cleaner split (vertical) */
+.theme-hero-tile .theme-hero-swatch.split {
+  background: linear-gradient(90deg, #ffffff 50%, #1c1c1e 50%) !important;
+}
+
+.theme-hero-tile .theme-hero-swatch {
+  position: relative;
+}
+
+.theme-hero-tile .theme-hero-dot {
+  z-index: 2;
+}
+
+/* === Settings: hard-constrain sidebar height === */
+.settings-shell {
+  height: 100% !important;
+  display: grid !important;
+  grid-template-rows: 1fr !important;
+}
+
+.settings-nav {
+  height: 100% !important;
+  min-height: 0 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  overflow: hidden !important;
+}
+
+.settings-nav-scroll {
+  flex: 1 1 0 !important;
+  min-height: 0 !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+}
+
+.setting-card-title {
+  padding: 12px 14px 8px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--muted-2);
+  border-bottom: 1px solid var(--divider);
+  background: var(--bg);
+}
+
+.setting-card-body {
+  padding: 2px 4px 6px;
+}
+
+.setting-card-footer {
+  padding: 8px 14px 10px;
+  border-top: 1px solid var(--divider);
+  background: var(--bg);
+}
+

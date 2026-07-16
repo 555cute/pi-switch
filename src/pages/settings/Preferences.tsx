@@ -140,10 +140,10 @@ function ThemeSection({
               onClick={() => set("theme", o.v)}
             >
               <div
-                className="theme-hero-swatch"
+                className={`theme-hero-swatch ${o.preview.split ? "split" : ""}`}
                 style={
                   o.preview.split
-                    ? { background: "linear-gradient(135deg,#ffffff 50%,#1c1c1e 50%)" }
+                    ? undefined
                     : { background: o.preview.bg }
                 }
               >
