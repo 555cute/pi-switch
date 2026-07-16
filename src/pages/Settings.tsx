@@ -272,9 +272,14 @@ export function Settings({
 
 function AboutPage() {
   const [version, setVersion] = useState("0.1.0");
+  const [platform, setPlatform] = useState<string>("Web");
+  const [copied, setCopied] = useState(false);
   useEffect(() => {
     void window.piSwitchDesktop?.getVersion?.().then((v) => {
       if (v) setVersion(String(v));
+    });
+    void Promise.resolve(window.piSwitchDesktop?.platform?.()).then((p) => {
+      if (p) setPlatform(String(p));
     });
   }, []);
 
@@ -287,11 +292,74 @@ function AboutPage() {
     { name: "JetBrains Mono", license: "OFL" },
   ];
 
+  const repoUrl = "https://github.com/555cute/pi-switch";
+  const copyCmd = async () => {
+    try {
+      await navigator.clipboard.writeText(repoUrl);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch {
+      /* ignore */
+    }
+  };
+
   return (
     <div className="settings-stack">
+      <section className="cc-card about-hero-card">
+        <div className="about-hero">
+          <img src="/logo.png" alt="pi-switch" className="about-hero-logo" />
+          <div className="about-hero-text">
+            <div className="about-hero-name">pi-switch</div>
+            <div className="about-hero-tag">
+              v{version} · {platform}
+            </div>
+            <div className="about-hero-desc">
+              pi 编码代理的桌面管理器 · 供应商 / 用量 / 技能 / 包
+            </div>
+          </div>
+        </div>
+      </section>
+
       <section className="cc-card">
-        <div className="cc-card-title">应用</div>
-        <div className="cc-card-sub">pi-switch 的版本和运行信息</div>
+        <div className="cc-card-title">仓库</div>
+        <div className="cc-card-sub">开源项目，欢迎 Issue / PR</div>
+        <div className="cc-card-body">
+          <div className="cc-row">
+            <span className="cc-row-label">GitHub</span>
+            <a
+              className="cc-row-value cc-link"
+              href={repoUrl}
+              target="_blank"
+              rel="noreferrer"
+            >
+              github.com/555cute/pi-switch
+            </a>
+          </div>
+          <div className="cc-row">
+            <span className="cc-row-label">Issues</span>
+            <a
+              className="cc-row-value cc-link"
+              href={repoUrl + "/issues"}
+              target="_blank"
+              rel="noreferrer"
+            >
+              报告问题 →
+            </a>
+          </div>
+          <div className="cc-row">
+            <span className="cc-row-label">复制仓库地址</span>
+            <span className="cc-row-value">
+              <button type="button" className="btn xs" onClick={copyCmd}>
+                {copied ? "已复制 ✓" : "复制"}
+              </button>
+            </span>
+          </div>
+        </div>
+      </section>
+
+      <section className="cc-card">
+        <div className="cc-card-title">应用信息</div>
+        <div className="cc-card-sub">版本 / 平台 / 许可</div>
         <div className="cc-card-body">
           <div className="cc-row">
             <span className="cc-row-label">名称</span>
@@ -304,12 +372,18 @@ function AboutPage() {
           <div className="cc-row">
             <span className="cc-row-label">平台</span>
             <span className="cc-row-value">
-              {window.piSwitchDesktop?.isDesktop ? "Electron" : "Web"}
+              {platform} · {window.piSwitchDesktop?.isDesktop ? "桌面端" : "浏览器"}
             </span>
           </div>
           <div className="cc-row">
             <span className="cc-row-label">许可</span>
             <span className="cc-row-value">MIT</span>
+          </div>
+          <div className="cc-row">
+            <span className="cc-row-label">更新</span>
+            <span className="cc-row-value">
+              <span className="muted">v0.1.0 — 当前已是最新</span>
+            </span>
           </div>
         </div>
       </section>
@@ -321,7 +395,17 @@ function AboutPage() {
           {deps.map((d) => (
             <div className="cc-row" key={d.name}>
               <span className="cc-row-label">{d.name}</span>
-              <span className="cc-row-value">{d.license}</span>
+              <span className="cc-row-value">
+                {d.license}
+                <a
+                  className="cc-link-small"
+                  href={repoUrl + "/blob/main/THIRD-PARTY-NOTICES.md"}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  许可全文
+                </a>
+              </span>
             </div>
           ))}
         </div>

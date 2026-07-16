@@ -351,32 +351,77 @@ export function Providers() {
             })}
             {filtered.length === 0 ? (
               <div className="empty-inline">
-                {showOnlyNoAuth ? "都认证了 ✓" : "还没有供应商。点 + 新建。"}
+                {showOnlyNoAuth
+                  ? "都认证了 ✓"
+                  : data.providers.length === 0
+                    ? "列表为空，点右上 + 新建"
+                    : "没有匹配项"}
               </div>
             ) : null}
           </div>
         </section>
 
         <section className="panel form-panel">
-          <div className="empty-state-large">
-            <div className="empty-icon">☁</div>
-            <div className="empty-title">选择或新建供应商</div>
-            <div className="empty-desc">
-              左边点击一个供应商可查看/编辑详情，或点右上「+ 新建」创建一个。
+          {data.providers.length === 0 ? (
+            <div className="empty-state-large">
+              <div className="empty-icon">☁</div>
+              <div className="empty-title">还没有供应商</div>
+              <div className="empty-desc">
+                {defaults?.defaultProvider
+                  ? `当前默认供应商为 ${defaults.defaultProvider}，但列表中未读到。检查 ${cache.agentHome ?? "~/.pi/agent"}/models.json 是否存在。`
+                  : "添加一个供应商以连接 AI 模型。可以手动新建，或从 provider 官网复制 baseUrl + 模型名。"}
+              </div>
+              {defaults?.defaultProvider && defaults?.defaultModel ? (
+                <div className="cc-card" style={{ marginTop: 16, textAlign: "left" }}>
+                  <div className="cc-card-title" style={{ padding: "10px 14px 4px", fontSize: 13 }}>
+                    当前默认
+                  </div>
+                  <div className="cc-row" style={{ padding: "8px 14px" }}>
+                    <span className="cc-row-label">供应商</span>
+                    <span className="cc-row-value">{defaults.defaultProvider}</span>
+                  </div>
+                  <div className="cc-row" style={{ padding: "8px 14px" }}>
+                    <span className="cc-row-label">模型</span>
+                    <span className="cc-row-value mono">{defaults.defaultModel}</span>
+                  </div>
+                </div>
+              ) : null}
+              <div className="row-gap" style={{ marginTop: 16, justifyContent: "center" }}>
+                <button type="button" className="btn primary sm" onClick={startCreate}>
+                  + 新建供应商
+                </button>
+                <button
+                  type="button"
+                  className="btn ghost sm"
+                  onClick={() =>
+                    cache.agentHome &&
+                    window.piSwitchDesktop?.openPath?.(cache.agentHome)
+                  }
+                >
+                  打开目录
+                </button>
+                <button
+                  type="button"
+                  className="btn ghost sm"
+                  onClick={() => ensureProviders(true)}
+                >
+                  重新扫描
+                </button>
+              </div>
+              <p className="muted small" style={{ marginTop: 12, textAlign: "center" }}>
+                pi-switch 从 <code>{cache.agentHome}/models.json</code> 读取配置。
+                也支持从 OpenRouter / Anthropic / OpenAI 等 provider 控制台复制参数。
+              </p>
             </div>
-            <div className="row-gap" style={{ marginTop: 12 }}>
-              <button type="button" className="btn primary sm" onClick={startCreate}>
-                + 新建供应商
-              </button>
-              <button
-                type="button"
-                className="btn ghost sm"
-                onClick={() => cache.agentHome && window.piSwitchDesktop?.openPath?.(cache.agentHome)}
-              >
-                打开 models.json 目录
-              </button>
+          ) : (
+            <div className="empty-state-large">
+              <div className="empty-icon">↖</div>
+              <div className="empty-title">从左侧选择供应商</div>
+              <div className="empty-desc">
+                点击列表项查看 / 编辑配置，或点「+ 新建」添加新的。
+              </div>
             </div>
-          </div>
+          )}
         </section>
       </div>
 

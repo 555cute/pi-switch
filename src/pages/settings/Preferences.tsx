@@ -444,6 +444,23 @@ function GeneralSection({
           description="首次启动时展示使用引导"
           control={<Toggle checked={draft.showOnboarding} onChange={(v) => set("showOnboarding", v)} />}
         />
+        <SettingRow
+          label="聚焦时刷新"
+          description="窗口重新获得焦点时自动重新拉取数据"
+          control={<Toggle checked={draft.refreshOnFocus} onChange={(v) => set("refreshOnFocus", v)} />}
+        />
+        <SettingRow
+          label="启动时刷新"
+          description="应用启动后立即刷新所有数据"
+          control={<Toggle checked={draft.refreshOnStartup} onChange={(v) => set("refreshOnStartup", v)} />}
+        />
+      </SettingCard>
+      <SettingCard title="危险操作">
+        <SettingRow
+          label="删除前确认"
+          description="删除供应商、包、备份时弹出确认对话框"
+          control={<Toggle checked={draft.confirmDestructive} onChange={(v) => set("confirmDestructive", v)} />}
+        />
       </SettingCard>
     </div>
   );
