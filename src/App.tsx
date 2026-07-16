@@ -16,6 +16,7 @@ import {
 import { api } from "./api";
 import type { ManageSection, NavRequest, TabId } from "./types";
 import "./App.css";
+import "./ui-v2.css";
 
 const TABS: { id: TabId; label: string; icon?: string }[] = [
   { id: "dashboard", label: "概览" },
