@@ -8,8 +8,8 @@ import { toast } from "../components/Toast";
 function Sparkline({
   points,
   color = "currentColor",
-  width = 60,
-  height = 22,
+  width = 72,
+  height = 28,
 }: {
   points: number[];
   color?: string;
@@ -20,13 +20,18 @@ function Sparkline({
   const max = Math.max(...points, 1);
   const min = Math.min(...points, 0);
   const span = Math.max(max - min, 1);
-  const d = points
-    .map((v, i) => {
-      const x = (i / Math.max(points.length - 1, 1)) * (width - 2) + 1;
-      const y = height - 2 - ((v - min) / span) * (height - 4);
-      return `${i === 0 ? "M" : "L"}${x.toFixed(1)} ${y.toFixed(1)}`;
-    })
+  const coords = points.map((v, i) => {
+    const x = (i / Math.max(points.length - 1, 1)) * (width - 2) + 1;
+    const y = height - 2 - ((v - min) / span) * (height - 4);
+    return [x, y] as const;
+  });
+  const line = coords
+    .map(([x, y], i) => `${i === 0 ? "M" : "L"}${x.toFixed(1)} ${y.toFixed(1)}`)
     .join(" ");
+  const area =
+    `M${coords[0][0].toFixed(1)} ${height - 1} ` +
+    coords.map(([x, y]) => `L${x.toFixed(1)} ${y.toFixed(1)}`).join(" ") +
+    ` L${coords[coords.length - 1][0].toFixed(1)} ${height - 1} Z`;
   return (
     <svg
       className="spark"
@@ -35,8 +40,9 @@ function Sparkline({
       height={height}
       aria-hidden
     >
+      <path d={area} fill={color} opacity="0.12" />
       <path
-        d={d}
+        d={line}
         fill="none"
         stroke={color}
         strokeWidth="2"
@@ -53,6 +59,57 @@ function splitTokens(n: number): { num: string; unit: string } {
   if (n >= 1_000) return { num: (n / 1_000).toFixed(1), unit: "K" };
   return { num: String(n), unit: "" };
 }
+
+const QUICK_ACTIONS: Array<{
+  title: string;
+  sub: string;
+  icon: string;
+  tone: string;
+  nav: NavRequest | string;
+}> = [
+  {
+    title: "管理供应商",
+    sub: "模型 · API Key · 探测",
+    icon: "☁",
+    tone: "blue",
+    nav: { tab: "manage", manageSection: "providers" },
+  },
+  {
+    title: "扩展包与技能",
+    sub: "安装 · 更新 · 启用",
+    icon: "⧉",
+    tone: "orange",
+    nav: { tab: "manage", manageSection: "packages" },
+  },
+  {
+    title: "查看用量详情",
+    sub: "趋势 · 成本 · 会话",
+    icon: "▮",
+    tone: "slate",
+    nav: "usage",
+  },
+  {
+    title: "进程与事件",
+    sub: "运行中的 pi 进程",
+    icon: "▷",
+    tone: "violet",
+    nav: { tab: "settings", settingsLeaf: "control" },
+  },
+  {
+    title: "备份与恢复",
+    sub: "配置快照管理",
+    icon: "◉",
+    tone: "teal",
+    nav: { tab: "settings", settingsLeaf: "backups" },
+  },
+  {
+    title: "外观设置",
+    sub: "主题 · 字体 · 布局",
+    icon: "◐",
+    tone: "blue",
+    nav: { tab: "settings", settingsLeaf: "theme" },
+  },
+];
 
 export function Overview({
   onNavigate,
@@ -84,56 +141,40 @@ export function Overview({
 
   if (!data) {
     return (
-      <div className="page">
+      <div className="page ov-page">
         <header className="page-header">
           <div>
-            <h1>概览 <span className="en">Dashboard</span></h1>
+            <h1>
+              概览 <span className="en">Dashboard</span>
+            </h1>
           </div>
         </header>
         <div className="stat-grid">
           {[0, 1, 2, 3].map((i) => (
             <div className="stat-card" key={i}>
-              <Skeleton width="50%" height={10} />
-              <div style={{ height: 8 }} />
-              <Skeleton width="70%" height={20} />
-              <div style={{ height: 6 }} />
               <Skeleton width="40%" height={10} />
+              <div style={{ height: 10 }} />
+              <Skeleton width="65%" height={24} />
+              <div style={{ height: 10 }} />
+              <Skeleton width="50%" height={10} />
             </div>
           ))}
         </div>
         <div className="dash-main">
-          <section className="panel">
-            <div className="panel-header">
-              <h2>常用工具</h2>
-            </div>
-            <div style={{ padding: 16 }}>
-              <Skeleton width="100%" height={14} />
-              <div style={{ height: 6 }} />
-              <Skeleton width="80%" height={14} />
-              <div style={{ height: 6 }} />
-              <Skeleton width="90%" height={14} />
-            </div>
-          </section>
-          <section className="panel">
-            <div className="panel-header">
-              <h2>技能使用</h2>
-            </div>
-            <div style={{ padding: 16 }}>
-              <Skeleton width="100%" height={14} />
-              <div style={{ height: 6 }} />
-              <Skeleton width="80%" height={14} />
-            </div>
-          </section>
-          <section className="panel">
-            <div className="panel-header">
-              <h2>最近 Sessions</h2>
-            </div>
-            <div style={{ padding: 16 }}>
-              <Skeleton width="100%" height={40} />
-              <div style={{ height: 6 }} />
-              <Skeleton width="100%" height={40} />
-            </div>
-          </section>
+          {[0, 1, 2].map((i) => (
+            <section className="panel" key={i}>
+              <div className="panel-header">
+                <Skeleton width={80} height={14} />
+              </div>
+              <div style={{ padding: 16 }}>
+                <Skeleton width="100%" height={14} />
+                <div style={{ height: 10 }} />
+                <Skeleton width="85%" height={14} />
+                <div style={{ height: 10 }} />
+                <Skeleton width="70%" height={14} />
+              </div>
+            </section>
+          ))}
         </div>
       </div>
     );
@@ -147,14 +188,21 @@ export function Overview({
     data.totals.totalTokens > 0
       ? ((data.today.totalTokens / data.totals.totalTokens) * 100).toFixed(0)
       : "0";
+  const toolCalls = data.topTools.reduce((s, t) => s + t.count, 0);
+  const skillUses = data.topSkills.reduce((s, t) => s + t.count, 0);
+  const recentSessions = (usage?.sessions ?? []).slice(0, 6);
 
   return (
-    <div className="page">
+    <div className="page ov-page">
       <header className="page-header">
         <div>
           <h1>
             概览 <span className="en">Dashboard</span>
           </h1>
+          <p className="page-kicker">
+            {data.sessionFiles} 会话 · 今日 {formatTokens(data.today.totalTokens)} · 累计{" "}
+            {formatTokens(data.totals.totalTokens)}
+          </p>
         </div>
         <div className="header-actions">
           <div className="status-chip">
@@ -175,15 +223,18 @@ export function Overview({
         </div>
       </header>
 
+      {/* KPI row */}
       <div className="stat-grid">
         <div className="stat-card">
           <div className="stat-label">今日 Token</div>
           <div className="stat-value">
             {today.num}
-            {today.unit && <span className="stat-unit">{today.unit}</span>}
+            {today.unit ? <span className="stat-unit">{today.unit}</span> : null}
           </div>
           <div className="stat-hint">
-            {data.today.messages} 条 · {formatCost(data.today.cost)}
+            <span>
+              {data.today.messages} 条 · {formatCost(data.today.cost)}
+            </span>
             {data.today.totalTokens > 0 ? (
               <Tag tone="info">{todayPct}%</Tag>
             ) : null}
@@ -194,53 +245,77 @@ export function Overview({
           <div className="stat-label">累计 Token</div>
           <div className="stat-value">
             {allTime.num}
-            {allTime.unit && <span className="stat-unit">{allTime.unit}</span>}
+            {allTime.unit ? <span className="stat-unit">{allTime.unit}</span> : null}
           </div>
           <div className="stat-hint">{data.totals.messages} 条消息</div>
           <div className="stat-side">
-            <Sparkline points={dayPoints} color="var(--accent)" width={56} height={20} />
+            <Sparkline points={dayPoints} color="var(--accent)" />
           </div>
         </div>
 
-        <div className="stat-card">
+        <div
+          className="stat-card stat-card--clickable"
+          role="button"
+          tabIndex={0}
+          onClick={() => onNavigate({ tab: "manage", manageSection: "providers" })}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              onNavigate({ tab: "manage", manageSection: "providers" });
+            }
+          }}
+        >
           <div className="stat-label">默认模型</div>
-          <div
-            className="stat-value"
-            style={{ fontSize: 15, marginTop: 2, letterSpacing: 0, lineHeight: 1.2 }}
-          >
+          <div className="stat-value stat-value--model" title={modelLabel}>
             {modelLabel}
           </div>
           <div className="stat-hint">
             <span className="tag">{data.defaultProvider ?? "—"}</span>
             <span className="online">● ready</span>
           </div>
-          <div className="stat-side" style={{ top: 12, right: 12 }}>
-            <button
-              type="button"
-              className="btn xs"
-              onClick={() => onNavigate({ tab: "manage", manageSection: "providers" })}
-            >
-              切换
-            </button>
+          <div className="stat-side">
+            <span className="stat-link">切换 ›</span>
           </div>
         </div>
 
-        <div className="stat-card">
+        <div
+          className="stat-card stat-card--clickable"
+          role="button"
+          tabIndex={0}
+          onClick={() => onNavigate({ tab: "manage", manageSection: "skills" })}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              onNavigate({ tab: "manage", manageSection: "skills" });
+            }
+          }}
+        >
           <div className="stat-label">资源</div>
           <div className="stat-value">{data.sessionFiles}</div>
-          <div className="stat-hint">
-            {data.providerCount} 供 · {data.skillCount} 技 · {data.packageCount} 扩
+          <div className="stat-hint ov-resource-hint">
+            <span>
+              <b>{data.providerCount}</b> 供应商
+            </span>
+            <span className="ov-dot">·</span>
+            <span>
+              <b>{data.skillCount}</b> 技能
+            </span>
+            <span className="ov-dot">·</span>
+            <span>
+              <b>{data.packageCount}</b> 扩展
+            </span>
           </div>
         </div>
       </div>
 
+      {/* 3-column main */}
       <div className="dash-main">
         <section className="panel panel-rank">
-          <div className="panel-accent teal" />
           <div className="panel-header">
             <h2>
               常用工具 <span className="en">Top Tools</span>
             </h2>
+            <span className="panel-meta">{toolCalls.toLocaleString()} 次</span>
           </div>
           <div className="rank-list">
             {data.topTools.slice(0, 8).map((t, i) => {
@@ -248,15 +323,14 @@ export function Overview({
               return (
                 <div className="rank-row" key={t.name}>
                   <span className="rank-idx">{i + 1}</span>
-                  <div>
+                  <div className="rank-body">
                     <div className="rank-name-row">
                       <span className="rank-name" title={t.name}>
                         {t.name}
                       </span>
                       <span className="rank-meta">
                         <span className="rank-pct">{pct.toFixed(1)}%</span>
-                        {" · "}
-                        {t.count.toLocaleString()}
+                        <span className="rank-count">{t.count.toLocaleString()}</span>
                       </span>
                     </div>
                     <div className="rank-track">
@@ -273,88 +347,93 @@ export function Overview({
               <div className="empty-inline">暂无工具调用记录</div>
             ) : null}
           </div>
-          <div className="panel-footer">
-            <span>总计 {data.topTools.reduce((s, t) => s + t.count, 0).toLocaleString()} 次调用</span>
-          </div>
         </section>
 
         <section className="panel panel-rank">
-          <div className="panel-accent violet" />
           <div className="panel-header">
             <h2>
               技能使用 <span className="en">Top Skills</span>
             </h2>
+            <span className="panel-meta">{skillUses.toLocaleString()} 次</span>
           </div>
-          <div className="rank-list">
-            {data.topSkills.slice(0, 8).map((s, i) => {
-              const pct = (s.count / skillTotal) * 100;
-              return (
-                <div className="rank-row" key={s.name}>
-                  <span className="rank-idx">{i + 1}</span>
-                  <div>
-                    <div className="rank-name-row">
-                      <span className="rank-name" title={s.name}>
-                        {s.name}
-                      </span>
-                      <span className="rank-meta">
-                        <span className="rank-pct">{pct.toFixed(1)}%</span>
-                        {" · "}
-                        {s.count.toLocaleString()}
-                      </span>
-                    </div>
-                    <div className="rank-track">
-                      <div
-                        className="rank-fill violet"
-                        style={{ width: `${Math.max(2, pct)}%` }}
-                      />
+          {data.topSkills.length ? (
+            <div className="rank-list">
+              {data.topSkills.slice(0, 8).map((s, i) => {
+                const pct = (s.count / skillTotal) * 100;
+                return (
+                  <div className="rank-row" key={s.name}>
+                    <span className="rank-idx">{i + 1}</span>
+                    <div className="rank-body">
+                      <div className="rank-name-row">
+                        <span className="rank-name" title={s.name}>
+                          {s.name}
+                        </span>
+                        <span className="rank-meta">
+                          <span className="rank-pct">{pct.toFixed(1)}%</span>
+                          <span className="rank-count">{s.count.toLocaleString()}</span>
+                        </span>
+                      </div>
+                      <div className="rank-track">
+                        <div
+                          className="rank-fill violet"
+                          style={{ width: `${Math.max(2, pct)}%` }}
+                        />
+                      </div>
                     </div>
                   </div>
-                </div>
-              );
-            })}
-            {!data.topSkills.length ? (
-              <div className="empty-inline">
-                尚未在会话中调用技能
-                <div className="muted small" style={{ marginTop: 4 }}>
-                  已发现 {data.skillCount} 个技能，去 管理 → 技能 浏览
-                </div>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="ov-empty">
+              <div className="ov-empty-icon">◇</div>
+              <div className="ov-empty-title">尚未检测到技能调用</div>
+              <div className="ov-empty-desc">
+                本地已发现 <b>{data.skillCount}</b> 个技能，调用后会出现在这里
               </div>
-            ) : null}
-          </div>
-          <div className="panel-footer">
-            <span>总计 {data.topSkills.reduce((s, t) => s + t.count, 0).toLocaleString()} 次使用</span>
-          </div>
+              <button
+                type="button"
+                className="btn sm"
+                onClick={() => onNavigate({ tab: "manage", manageSection: "skills" })}
+              >
+                浏览技能
+              </button>
+            </div>
+          )}
         </section>
 
         <section className="panel panel-sessions">
-          <div className="panel-accent slate" />
           <div className="panel-header">
-            <h2>最近 Sessions</h2>
+            <h2>
+              最近会话 <span className="en">Sessions</span>
+            </h2>
             <button
               type="button"
-              className="btn ghost sm"
+              className="btn ghost xs"
               onClick={() => onNavigate("usage")}
             >
-              全部
+              全部 ›
             </button>
           </div>
           <div className="session-list">
-            {(usage?.sessions ?? []).slice(0, 5).map((s) => {
+            {recentSessions.map((s) => {
               const cwd = s.cwd?.replace(/\\/g, "/") ?? "";
+              const parts = cwd.split("/").filter(Boolean);
               const short =
-                cwd.split("/").filter(Boolean).slice(-2).join("/") ||
-                s.id.slice(0, 8);
+                parts.slice(-2).join("/") || s.id.slice(0, 8);
               return (
-                <div className="session-item" key={s.path}>
+                <button
+                  type="button"
+                  className="session-item session-item--btn"
+                  key={s.path}
+                  onClick={() => onNavigate("usage")}
+                  title={s.cwd ?? s.id}
+                >
                   <div className="session-icon">π</div>
-                  <div style={{ minWidth: 0 }}>
-                    <div className="session-name" title={s.cwd ?? s.id}>
-                      {short}
-                    </div>
+                  <div className="session-mid">
+                    <div className="session-name">{short}</div>
                     <div className="session-sub">
-                      <span>
-                        {s.provider ?? "—"}/{s.model ?? "—"}
-                      </span>
+                      {(s.provider ?? "—") + " / " + (s.model ?? "—")}
                     </div>
                   </div>
                   <div className="session-right">
@@ -363,18 +442,18 @@ export function Overview({
                     </div>
                     <div className="session-time">{formatDate(s.startedAt)}</div>
                   </div>
-                </div>
+                </button>
               );
             })}
-            {!usage?.sessions?.length ? (
-              <div className="empty-inline">暂无 session</div>
+            {!recentSessions.length ? (
+              <div className="empty-inline">暂无 session 记录</div>
             ) : null}
           </div>
           <div className="panel-footer">
-            <span>共 {data.sessionFiles} 条</span>
+            <span className="muted small">共 {data.sessionFiles} 条</span>
             <button
               type="button"
-              className="btn ghost sm"
+              className="btn ghost xs"
               onClick={() => onNavigate("usage")}
             >
               查看全部
@@ -383,6 +462,7 @@ export function Overview({
         </section>
       </div>
 
+      {/* Quick actions */}
       <section className="panel">
         <div className="panel-header">
           <h2>
@@ -390,72 +470,21 @@ export function Overview({
           </h2>
         </div>
         <div className="quick-grid">
-          <button
-            type="button"
-            className="quick-card"
-            onClick={() => onNavigate({ tab: "manage", manageSection: "providers" })}
-          >
-            <div className="quick-icon blue">☁</div>
-            <div className="quick-text">
-              <div className="quick-title">管理供应商</div>
-            </div>
-            <div className="quick-arrow">›</div>
-          </button>
-          <button
-            type="button"
-            className="quick-card"
-            onClick={() => onNavigate({ tab: "manage", manageSection: "packages" })}
-          >
-            <div className="quick-icon orange">⧉</div>
-            <div className="quick-text">
-              <div className="quick-title">扩展包与技能</div>
-            </div>
-            <div className="quick-arrow">›</div>
-          </button>
-          <button
-            type="button"
-            className="quick-card"
-            onClick={() => onNavigate("usage")}
-          >
-            <div className="quick-icon slate">▮</div>
-            <div className="quick-text">
-              <div className="quick-title">查看用量详情</div>
-            </div>
-            <div className="quick-arrow">›</div>
-          </button>
-          <button
-            type="button"
-            className="quick-card"
-            onClick={() => onNavigate({ tab: "settings", settingsLeaf: "control" })}
-          >
-            <div className="quick-icon violet">▷</div>
-            <div className="quick-text">
-              <div className="quick-title">进程与事件</div>
-            </div>
-            <div className="quick-arrow">›</div>
-          </button>
-          <button
-            type="button"
-            className="quick-card"
-            onClick={() => onNavigate({ tab: "settings", settingsLeaf: "backups" })}
-          >
-            <div className="quick-icon teal">◉</div>
-            <div className="quick-text">
-              <div className="quick-title">备份与恢复</div>
-            </div>
-            <div className="quick-arrow">›</div>
-          </button>
-          <button
-            type="button"
-            className="quick-card"
-            onClick={() => onNavigate({ tab: "settings", settingsLeaf: "theme" })}
-          >
-            <div className="quick-icon blue">◐</div>
-            <div className="quick-text">
-              <div className="quick-title">外观设置</div>
-            </div>
-            <div className="quick-arrow">›</div>
-          </button>
+          {QUICK_ACTIONS.map((a) => (
+            <button
+              type="button"
+              className="quick-card"
+              key={a.title}
+              onClick={() => onNavigate(a.nav)}
+            >
+              <div className={`quick-icon ${a.tone}`}>{a.icon}</div>
+              <div className="quick-text">
+                <div className="quick-title">{a.title}</div>
+                <div className="quick-desc">{a.sub}</div>
+              </div>
+              <div className="quick-arrow">›</div>
+            </button>
+          ))}
         </div>
       </section>
     </div>

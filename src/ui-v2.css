@@ -2077,3 +2077,166 @@ input[type="checkbox"].switch:checked {
 .topbar {
   justify-content: flex-start !important;
 }
+
+/* ========== Overview page polish ========== */
+.ov-page {
+  gap: 14px !important;
+}
+
+.ov-page .page-header {
+  align-items: flex-start !important;
+}
+
+.stat-card--clickable {
+  cursor: pointer !important;
+}
+
+.stat-card--clickable:hover {
+  border-color: var(--border-strong) !important;
+  box-shadow: var(--shadow) !important;
+}
+
+.stat-value--model {
+  font-size: 18px !important;
+  font-weight: 700 !important;
+  letter-spacing: -0.03em !important;
+  line-height: 1.2 !important;
+  margin-top: 8px !important;
+  max-width: 100% !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+  padding-right: 48px !important;
+}
+
+.stat-link {
+  font-size: 12px !important;
+  font-weight: 600 !important;
+  color: var(--accent) !important;
+  white-space: nowrap !important;
+}
+
+.ov-resource-hint {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  gap: 4px 6px !important;
+  align-items: center !important;
+}
+
+.ov-resource-hint b {
+  font-weight: 650 !important;
+  color: var(--text-2) !important;
+}
+
+.ov-dot {
+  color: var(--muted-2) !important;
+}
+
+.panel-meta {
+  font-size: 11.5px !important;
+  font-weight: 550 !important;
+  color: var(--muted-2) !important;
+  font-feature-settings: "tnum" !important;
+}
+
+.dash-main {
+  align-items: stretch !important;
+}
+
+.dash-main > .panel {
+  min-height: 320px !important;
+  height: 100% !important;
+}
+
+.rank-body {
+  min-width: 0 !important;
+  flex: 1 !important;
+}
+
+.rank-meta {
+  display: inline-flex !important;
+  align-items: baseline !important;
+  gap: 8px !important;
+  flex-shrink: 0 !important;
+}
+
+.rank-pct {
+  color: var(--muted-2) !important;
+  font-feature-settings: "tnum" !important;
+}
+
+.rank-count {
+  color: var(--text-2) !important;
+  font-weight: 600 !important;
+  font-feature-settings: "tnum" !important;
+  min-width: 2.5em !important;
+  text-align: right !important;
+}
+
+.ov-empty {
+  flex: 1 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 8px !important;
+  padding: 32px 20px !important;
+  text-align: center !important;
+  min-height: 220px !important;
+}
+
+.ov-empty-icon {
+  width: 44px !important;
+  height: 44px !important;
+  border-radius: 12px !important;
+  background: var(--bg) !important;
+  border: 1px solid var(--border) !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  font-size: 18px !important;
+  color: var(--muted-2) !important;
+  margin-bottom: 4px !important;
+}
+
+.ov-empty-title {
+  font-size: 13.5px !important;
+  font-weight: 600 !important;
+  color: var(--text) !important;
+}
+
+.ov-empty-desc {
+  font-size: 12px !important;
+  color: var(--muted) !important;
+  line-height: 1.45 !important;
+  max-width: 220px !important;
+  margin-bottom: 6px !important;
+}
+
+.ov-empty-desc b {
+  color: var(--text-2) !important;
+  font-weight: 650 !important;
+}
+
+.session-item--btn {
+  width: 100% !important;
+  border: none !important;
+  background: transparent !important;
+  cursor: pointer !important;
+  font: inherit !important;
+  color: inherit !important;
+  text-align: left !important;
+}
+
+.session-mid {
+  min-width: 0 !important;
+}
+
+.quick-desc {
+  display: block !important;
+}
+
+.spark {
+  display: block !important;
+  opacity: 1 !important;
+}
