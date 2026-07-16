@@ -570,12 +570,13 @@ export function Usage() {
             用量 <span className="en">Usage</span>
           </h1>
         </div>
-        <div className="header-actions">
+        <div className="row-gap">
           <select
             className="input sm"
             value={exportKind}
             onChange={(e) => setExportKind(e.target.value as ExportKind)}
             title="导出类型"
+            style={{ width: 130 }}
           >
             <option value="sessions">导出会话</option>
             <option value="days">导出按日</option>
