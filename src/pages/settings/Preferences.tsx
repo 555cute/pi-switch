@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { api } from "../../api";
 import {
   ensureAppSettings,
@@ -332,12 +332,36 @@ function AgentSection({
   set: <K extends keyof AppSettings>(k: K, v: AppSettings[K]) => void;
   agentHome?: string;
 }) {
+  const [info, setInfo] = useState<{
+    path: string;
+    exists: boolean;
+    mtime: string | null;
+    files: Array<{ name: string; size: number; mtime: string }>;
+  } | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const r = await api.getAgentHomeInfo();
+      setInfo(r);
+    } catch {
+      setInfo(null);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
+
   return (
     <div className="settings-stack">
-      <SettingCard title="用户内容">
+      <SettingCard title="Agent home 路径">
         <SettingRow
-          label="Agent home 路径"
-          description="pi-switch 读取/写入 pi 配置的根目录。留空用默认 ~/.pi/agent"
+          label="自定义路径"
+          description="留空使用默认 ~/.pi/agent；修改后保存立即生效"
           control={
             <div className="path-control">
               <input
@@ -345,23 +369,80 @@ function AgentSection({
                 placeholder={agentHome || "C:\\Users\\...\\.pi\\agent"}
                 value={draft.customAgentHome || ""}
                 onChange={(e) => set("customAgentHome", e.target.value || null)}
+                style={{ width: 360 }}
               />
               <button
                 type="button"
                 className="btn ghost sm"
-                onClick={() => agentHome && window.piSwitchDesktop?.openPath?.(agentHome)}
+                onClick={() => {
+                  if (window.piSwitchDesktop?.openPath) {
+                    void window.piSwitchDesktop.openPath(
+                      draft.customAgentHome || agentHome || "",
+                    );
+                  }
+                }}
               >
-                打开
+                打开目录
               </button>
+              {draft.customAgentHome ? (
+                <button
+                  type="button"
+                  className="btn ghost sm"
+                  onClick={() => set("customAgentHome", null)}
+                >
+                  清除
+                </button>
+              ) : null}
             </div>
           }
         />
         {agentHome ? (
-          <div className="path-current">
-            <span className="muted small">当前：</span>
-            <code>{agentHome}</code>
-          </div>
+          <SettingRow
+            label="当前解析路径"
+            description="保存到 settings.json 后下次启动生效"
+            control={<code className="mono small">{agentHome}</code>}
+          />
         ) : null}
+      </SettingCard>
+
+      <SettingCard
+        title={`目录内容（${info?.files.length ?? "—"} 个文件 · 前 30 个最大的）`}
+      >
+        <div className="cc-card-body" style={{ padding: 0 }}>
+          <div className="cc-row" style={{ padding: "10px 14px" }}>
+            <span className="cc-row-label">状态</span>
+            <span className="cc-row-value">
+              {loading ? "检查中…" : info?.exists ? "存在" : "不存在"}
+              <button
+                type="button"
+                className="btn xs ghost"
+                style={{ marginLeft: 8 }}
+                onClick={() => void load()}
+              >
+                刷新
+              </button>
+            </span>
+          </div>
+          {info?.mtime ? (
+            <div className="cc-row" style={{ padding: "10px 14px" }}>
+              <span className="cc-row-label">最后修改</span>
+              <span className="cc-row-value mono small">{info.mtime.replace("T", " ").slice(0, 19)}</span>
+            </div>
+          ) : null}
+          {info?.files && info.files.length > 0 ? (
+            <div className="cc-row" style={{ padding: "10px 14px", alignItems: "flex-start", flexDirection: "column", gap: 4 }}>
+              <span className="cc-row-label" style={{ width: "100%" }}>文件</span>
+              <div style={{ width: "100%", display: "grid", gap: 2, fontSize: 12, color: "var(--muted)" }}>
+                {info.files.map((f) => (
+                  <div key={f.name} className="cc-file-row">
+                    <code className="mono small">{f.name}</code>
+                    <span className="muted small">{(f.size / 1024).toFixed(1)} KB</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : null}
+        </div>
       </SettingCard>
     </div>
   );

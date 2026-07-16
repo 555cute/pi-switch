@@ -107,6 +107,13 @@ export const api = {
     const r = await request<{ path: string }>("/api/agent-home");
     return r.path;
   },
+  getAgentHomeInfo: () =>
+    request<{
+      path: string;
+      exists: boolean;
+      mtime: string | null;
+      files: Array<{ name: string; size: number; mtime: string }>;
+    }>("/api/agent-home"),
   ensureExtensionLog: async () => {
     const r = await request<{ path: string }>("/api/ensure-extension-log", {
       method: "POST",

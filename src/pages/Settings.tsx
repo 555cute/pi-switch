@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Preferences, type PrefSection } from "./settings/Preferences";
 import { Backups } from "./settings/Backups";
 import { Control } from "./settings/Control";
+import { Diagnostics } from "./settings/Diagnostics";
 import { saveAppSettings, useCache } from "../store";
 import { toast } from "../components/Toast";
 
@@ -258,8 +259,11 @@ export function Settings({
 
       <div className="settings-body">
         {tab === "backups" ? <Backups /> : null}
-        {tab === "control" ? (
-          <Control focus={sub === "events" ? "events" : "processes"} />
+        {tab === "control" && sub === "control" ? <Control focus="processes" /> : null}
+        {tab === "control" && sub === "events" ? <Control focus="events" /> : null}
+        {tab === "control" && sub === "diagnostics" ? <Diagnostics /> : null}
+        {tab === "control" && (sub === "prompt" || sub === "developer") ? (
+          <Preferences section={sub as PrefSection} />
         ) : null}
         {tab === "about" ? <AboutPage /> : null}
         {tab !== "backups" && tab !== "control" && tab !== "about" && (

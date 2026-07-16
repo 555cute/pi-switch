@@ -3232,3 +3232,18 @@ html[data-theme="dark"] .usage-hero {
   color: var(--accent);
   text-decoration: underline;
 }
+
+/* === Settings: file row === */
+.cc-file-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 4px 8px;
+  border-radius: 5px;
+  background: var(--bg-subtle);
+}
+.cc-file-row code {
+  color: var(--text);
+  font-weight: 500;
+}
